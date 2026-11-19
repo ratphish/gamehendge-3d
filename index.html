@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gamehendge — Neo-CD-i 3D Virtual Reality Experience</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- 3D WebGL Canvas Layer -->
+  <div id="canvas-container"></div>
+
+  <!-- CRT / Retro Scanline Overlay -->
+  <div id="crt-overlay"></div>
+
+  <!-- CD-i Insert Disc / Splash Screen -->
+  <div id="splash-screen">
+    <div class="splash-box">
+      <div class="cdi-badge">PHILIPS CD-I COMPACT DISC INTERACTIVE SYSTEM</div>
+      <h1 class="splash-title">GAMEHENDGE 3D</h1>
+      <p class="splash-subtitle">THE MAN WHO STEPPED INTO YESTERDAY — VIRTUAL REALITY TOUR</p>
+      
+      <div class="splash-quote">
+        "This technology would allow the user to enter the virtual reality of Gamehendge on their TV (or computer) and basically 'travel' around Gamehendge hearing different music and meeting different characters. For instance, you could 'fly' over the forest with the Famous Mockingbird, seeing everything from the bird's perspective and landing wherever you wanted to. You could climb the mountain with Col. Forbin, or venture into the ghetto and meet the sloth."
+        <br><br><strong>— Trey Anastasio, 1993</strong>
+      </div>
+
+      <button id="btn-insert-disc" class="splash-btn">INSERT DISC & ENTER GAMEHENDGE</button>
+    </div>
+  </div>
+
+  <!-- Interactive Neo-CD-i HUD -->
+  <div id="hud-overlay">
+    <!-- Top Bar: Telemetry & Minimap -->
+    <div class="top-bar">
+      <div class="telemetry-deck">
+        <div class="telem-item">
+          <span class="telem-label">Navigation Mode</span>
+          <span id="telem-mode" class="telem-val mode-flight">MOCKINGBIRD FLIGHT</span>
+        </div>
+        <div class="telem-item">
+          <span class="telem-label">Sector Zone</span>
+          <span id="telem-zone" class="telem-val">GAMEHENDGE</span>
+        </div>
+        <div class="telem-item">
+          <span class="telem-label">Altitude</span>
+          <span id="telem-alt" class="telem-val">75 FT</span>
+        </div>
+        <div class="telem-item">
+          <span class="telem-label">Airspeed</span>
+          <span id="telem-speed" class="telem-val">28 KTS</span>
+        </div>
+        <div class="telem-item" style="justify-content: center; gap: 4px;">
+          <button id="btn-mode-toggle" class="deck-btn" title="Toggle Flight / Walk Mode">[T] MODE</button>
+          <button id="btn-crt-toggle" class="deck-btn" title="Toggle Retro CRT Scanlines">CRT FX</button>
+        </div>
+      </div>
+
+      <!-- Radar Minimap -->
+      <div class="radar-container">
+        <div class="radar-label-n">N</div>
+        <canvas id="radar-canvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Character Interaction Proximity Prompt -->
+    <div id="proximity-prompt">[E] TALK TO CHARACTER</div>
+
+    <!-- Bottom Bar: CD-i Player Deck & Navigation Guide -->
+    <div class="bottom-bar">
+      <div class="cdi-deck">
+        <div id="disc-indicator" class="disc-indicator">
+          <div class="disc-center"></div>
+        </div>
+        <div class="track-display">
+          <span id="track-status" class="track-status">SPATIAL AUDIO: ACTIVE</span>
+          <span id="track-title" class="track-title">The Lizards</span>
+          <span id="track-meta" class="track-meta">TEMPO: 124 BPM | 16-BIT SYNTH</span>
+        </div>
+        <div class="deck-buttons">
+          <button id="deck-btn-prev" class="deck-btn">◀ PREV</button>
+          <button id="deck-btn-play" class="deck-btn">PAUSE</button>
+          <button id="deck-btn-next" class="deck-btn">NEXT ▶</button>
+          <button id="deck-btn-auto" class="deck-btn active">AUTO: ON</button>
+        </div>
+      </div>
+
+      <!-- Quick Controls Guide -->
+      <div class="quick-help">
+        <strong>CONTROLS:</strong><br>
+        <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / Arrows : Steer & Throttle<br>
+        <kbd>Space</kbd> : Boost (Flight) / Jump (Walk)<br>
+        <kbd>Shift</kbd> : Airbrake / Glide<br>
+        <kbd>T</kbd> : Switch Flight / Walk Mode<br>
+        <kbd>V</kbd> : 1st / 3rd Person Camera<br>
+        <kbd>E</kbd> : Talk to Character<br>
+        <em>Mouse Drag</em> : Look Around
+      </div>
+    </div>
+  </div>
+
+  <!-- Character Dossier Modal -->
+  <div id="dossier-modal">
+    <div class="dossier-card">
+      <button id="dossier-close-btn" class="dossier-close">&times;</button>
+      <div class="dossier-header">
+        <h2 id="dossier-name" class="dossier-name">Character Name</h2>
+        <span id="dossier-title" class="dossier-title">Character Title</span>
+      </div>
+      <p id="dossier-quote" class="dossier-quote">"Quote"</p>
+      <p id="dossier-body" class="dossier-body">Dialogue lore content goes here...</p>
+      <div id="dossier-choices" class="dossier-choices">
+        <!-- Buttons injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- App Bootstrap -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
