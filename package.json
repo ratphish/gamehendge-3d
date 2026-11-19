@@ -16,5 +16,8 @@
     "retro-3d"
   ],
   "author": "Gamehendge Developer",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.187.0"
+  }
 }
