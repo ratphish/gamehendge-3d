@@ -1,0 +1,20 @@
+{
+  "name": "gamehendge-3d",
+  "version": "1.0.0",
+  "description": "Gamehendge Neo-CD-i 3D Virtual Reality Interactive Experience",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "start": "npx serve ."
+  },
+  "keywords": [
+    "phish",
+    "gamehendge",
+    "threejs",
+    "web-audio",
+    "cd-i",
+    "retro-3d"
+  ],
+  "author": "Gamehendge Developer",
+  "license": "MIT"
+}
