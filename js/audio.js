@@ -214,6 +214,14 @@ export class GameAudioEngine {
     osc2.connect(envGain);
     envGain.connect(this.filterNode);
 
+    osc1.onended = () => {
+      try {
+        osc1.disconnect();
+        osc2.disconnect();
+        envGain.disconnect();
+      } catch (_) {}
+    };
+
     osc1.start(now);
     osc2.start(now);
     osc1.stop(now + durationSec + 0.1);
@@ -236,6 +244,13 @@ export class GameAudioEngine {
 
     osc.connect(gain);
     gain.connect(this.filterNode);
+
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        gain.disconnect();
+      } catch (_) {}
+    };
 
     osc.start(now);
     osc.stop(now + durationSec + 0.05);
@@ -280,6 +295,8 @@ export class GameAudioEngine {
 
   startSequencer() {
     this.isPlaying = true;
+    this.tickAccumulator = 0;
+
     const scheduleStep = () => {
       if (!this.isPlaying || !this.ctx) {
         this.timerId = setTimeout(scheduleStep, 100);
@@ -290,25 +307,29 @@ export class GameAudioEngine {
       const bpm = theme.bpm || 120;
       const sixteenthSec = (60 / bpm) / 4;
 
-      // Play lead melody note
+      // Play lead melody note with true rhythmic duration
+      let currentDurationSixteenths = 2;
       if (theme.melody && theme.melody.length > 0) {
         const item = theme.melody[this.stepIndex % theme.melody.length];
         const [note, durationSixteenths] = item;
+        currentDurationSixteenths = durationSixteenths || 2;
         const freq = noteToFreq(note);
-        const durationSec = durationSixteenths * sixteenthSec;
+        const durationSec = currentDurationSixteenths * sixteenthSec;
         this.playSynthNote(freq, durationSec, 'sawtooth', 0.25);
         this.stepIndex = (this.stepIndex + 1) % theme.melody.length;
       }
 
-      // Play bassline accompaniment
-      if (theme.bass && theme.bass.length > 0) {
+      // Play bassline accompaniment in sync with harmonic bars
+      this.tickAccumulator = (this.tickAccumulator || 0) + currentDurationSixteenths;
+      if (this.tickAccumulator >= 8 && theme.bass && theme.bass.length > 0) {
+        this.tickAccumulator = 0;
         const bassNote = theme.bass[this.bassStepIndex % theme.bass.length];
         const bassFreq = noteToFreq(bassNote);
-        this.playBassNote(bassFreq, sixteenthSec * 4);
+        this.playBassNote(bassFreq, sixteenthSec * 6);
         this.bassStepIndex = (this.bassStepIndex + 1) % theme.bass.length;
       }
 
-      const nextDelayMs = Math.max(120, sixteenthSec * 2 * 1000);
+      const nextDelayMs = Math.max(90, currentDurationSixteenths * sixteenthSec * 1000);
       this.timerId = setTimeout(scheduleStep, nextDelayMs);
     };
 

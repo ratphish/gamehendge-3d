@@ -66,6 +66,10 @@ class GamehendgeApp {
 
     if (startBtn && splash) {
       startBtn.addEventListener('click', async () => {
+        if (this.isStarted) return;
+        this.isStarted = true;
+        startBtn.disabled = true;
+
         // Unlock browser audio context cleanly on click
         await this.audio.init();
 
@@ -76,7 +80,6 @@ class GamehendgeApp {
           splash.style.display = 'none';
         }, 600);
 
-        this.isStarted = true;
         this.clock.start();
         this.animate();
       });

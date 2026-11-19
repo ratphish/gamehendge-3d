@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import * as THREE from 'three';
+import * as THREE from '../js/vendor/three.module.js';
 import { calculateTerrainHeight, GameWorld } from '../js/world.js';
 
 test('Task 3: calculateTerrainHeight accurately maps Gamehendge topography', () => {

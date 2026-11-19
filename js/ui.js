@@ -229,15 +229,19 @@ export class GameUI {
       ctx.fill();
     }
 
-    // Draw Character Blips
+    // Draw Character Blips with individual character colors
     if (this.entities) {
       for (const char of this.entities.characters.values()) {
         const chx = cx + char.group.position.x * scale;
         const chz = cy + char.group.position.z * scale;
         ctx.beginPath();
-        ctx.arc(chx, chz, 2.5 * dpr, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffffff';
+        ctx.arc(chx, chz, 3.2 * dpr, 0, Math.PI * 2);
+        const hex = char.config && char.config.color ? '#' + char.config.color.toString(16).padStart(6, '0') : '#ffffff';
+        ctx.fillStyle = hex;
         ctx.fill();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 0.8 * dpr;
+        ctx.stroke();
       }
     }
 
@@ -299,6 +303,7 @@ export class GameUI {
   }
 
   handleChoiceAction(action) {
+    const bodyEl = document.getElementById('dossier-body');
     switch (action) {
       case 'takeoff':
         this.controls.setMode('flight');
@@ -310,16 +315,20 @@ export class GameUI {
         break;
       case 'wilson_chant':
         this.audio.playSting('wilson_chant');
+        if (bodyEl) bodyEl.innerText = "The mountain reverberates with a thousand echoing voices: 'WIL-SON! ... WIL-SON!' The tyrant grinds his teeth.";
         break;
       case 'read_book':
         this.audio.playSting('read_book');
+        if (bodyEl) bodyEl.innerText = "The pages shimmer with ancient wisdom: 'The trick was to surrender to the flow... We must live in harmony with the holy lizards!'";
         break;
       case 'sloth_contract':
         this.audio.playSting('sloth_contract');
+        if (bodyEl) bodyEl.innerText = "The Sloth nods slowly from the shadows: 'Piece of cake. Consider Wilson handled. But remember... blood has a price.'";
         break;
       case 'audio_mockingbird':
         this.audio.selectTrack('mockingbird');
         this.updateTrackInfo();
+        if (bodyEl) bodyEl.innerText = "The Famous Mockingbird spreads its emerald and gold wings, taking to the sky as the soaring flight theme begins!";
         break;
       case 'close':
       default:

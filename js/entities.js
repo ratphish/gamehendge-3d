@@ -150,11 +150,13 @@ export function createForbinModel(isAvatar = false) {
       const swing = Math.sin(time * 8) * 0.6;
       leftLegPivot.rotation.x = swing;
       rightLegPivot.rotation.x = -swing;
-      group.position.y = Math.abs(Math.sin(time * 8)) * 0.1;
+      torso.position.y = 2.0 + Math.abs(Math.sin(time * 8)) * 0.1;
+      head.position.y = 3.2 + Math.abs(Math.sin(time * 8)) * 0.1;
     } else {
       leftLegPivot.rotation.x = 0;
       rightLegPivot.rotation.x = 0;
-      group.position.y = Math.sin(time * 2) * 0.04;
+      torso.position.y = 2.0 + Math.sin(time * 2) * 0.04;
+      head.position.y = 3.2 + Math.sin(time * 2) * 0.04;
     }
   };
 
@@ -247,7 +249,7 @@ export function createRutherfordModel() {
   group.add(spear);
 
   group.animate = (time) => {
-    group.position.y += Math.sin(time * 2.2) * 0.002;
+    torso.position.y = 2.0 + Math.sin(time * 2.2) * 0.05;
     spear.rotation.z = Math.sin(time * 1.5) * 0.05;
   };
 
@@ -345,7 +347,9 @@ export function createIcculusModel() {
 
   group.animate = (time) => {
     // Ethereal levitation
-    group.position.y += Math.sin(time * 2.0) * 0.005;
+    robe.position.y = 1.8 + Math.sin(time * 2.0) * 0.12;
+    head.position.y = 3.6 + Math.sin(time * 2.0) * 0.12;
+    beard.position.y = 2.9 + Math.sin(time * 2.0) * 0.12;
     robe.rotation.y = time * 0.3;
   };
 

@@ -79,7 +79,8 @@ export class PlayerControls {
     if (newMode === this.mode) return;
     this.mode = newMode;
 
-    const terrainY = this.world ? this.world.getTerrainHeight(this.position.x, this.position.z) : 0;
+    const rawTerrainY = this.world ? this.world.getTerrainHeight(this.position.x, this.position.z) : 0;
+    const terrainY = Math.max(rawTerrainY, GAMEHENDGE_CONFIG.world.waterLevel - 0.2);
 
     if (this.mode === 'walk') {
       // Land on terrain
@@ -139,6 +140,13 @@ export class PlayerControls {
   }
 
   onKeyDown(e) {
+    if (typeof document !== 'undefined') {
+      const modal = document.getElementById('dossier-modal');
+      if (modal && modal.classList.contains('active')) {
+        return; // Pause control inputs while reading character dialogue
+      }
+    }
+
     switch (e.code) {
       case 'KeyW':
       case 'ArrowUp':
@@ -320,15 +328,22 @@ export class PlayerControls {
       const nextX = this.position.x + moveDir.x * this.walkSpeed * dt;
       const nextZ = this.position.z + moveDir.z * this.walkSpeed * dt;
 
-      // Obstacle collision check
-      if (this.world && !this.world.checkCollision(nextX, nextZ, 1.2)) {
-        this.position.x = nextX;
-        this.position.z = nextZ;
+      // Obstacle collision check with sliding response
+      if (this.world) {
+        if (!this.world.checkCollision(nextX, nextZ, 1.2)) {
+          this.position.x = nextX;
+          this.position.z = nextZ;
+        } else if (!this.world.checkCollision(nextX, this.position.z, 1.2)) {
+          this.position.x = nextX; // Slide along Z
+        } else if (!this.world.checkCollision(this.position.x, nextZ, 1.2)) {
+          this.position.z = nextZ; // Slide along X
+        }
       }
     }
 
     // Jump and gravity physics
-    const terrainY = this.world ? this.world.getTerrainHeight(this.position.x, this.position.z) : 0;
+    const rawTerrainY = this.world ? this.world.getTerrainHeight(this.position.x, this.position.z) : 0;
+    const terrainY = Math.max(rawTerrainY, GAMEHENDGE_CONFIG.world.waterLevel - 0.2);
     const groundLevel = terrainY + this.playerHeight;
 
     if (this.isGrounded) {
