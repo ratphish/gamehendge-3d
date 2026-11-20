@@ -293,6 +293,111 @@ export class GameAudioEngine {
     }
   }
 
+  /**
+   * High-polish procedural sound effects for Survivor Mode
+   */
+  playCombatSFX(type) {
+    if (!this.ctx || !this.masterGain) return;
+    const now = this.ctx.currentTime;
+
+    switch (type) {
+      case 'shot': {
+        // Snappy laser/whoosh
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(750, now);
+        osc.frequency.exponentialRampToValueAtTime(180, now + 0.08);
+
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.09);
+        osc.onended = () => { osc.disconnect(); gain.disconnect(); };
+        break;
+      }
+      case 'hit': {
+        // Crunchy impact punch
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(45, now + 0.07);
+
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.08);
+        osc.onended = () => { osc.disconnect(); gain.disconnect(); };
+        break;
+      }
+      case 'gem': {
+        // Sweet ascending chime
+        const pitches = [880, 1046.5, 1174.6, 1318.5, 1567.9];
+        const pitch = pitches[Math.floor(Math.random() * pitches.length)];
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(pitch, now);
+
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.1);
+        osc.onended = () => { osc.disconnect(); gain.disconnect(); };
+        break;
+      }
+      case 'level_up': {
+        // Triumphant brass fanfare
+        ['C5', 'E5', 'G5', 'C6'].forEach((n, idx) => {
+          setTimeout(() => {
+            this.playSynthNote(noteToFreq(n), 0.35, 'sawtooth', 0.4);
+          }, idx * 90);
+        });
+        break;
+      }
+      case 'hurt': {
+        // Heavy low warning buzz
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.linearRampToValueAtTime(60, now + 0.18);
+
+        gain.gain.setValueAtTime(0.45, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.19);
+        osc.onended = () => { osc.disconnect(); gain.disconnect(); };
+        break;
+      }
+      case 'boss_alert': {
+        // Thunderous ominous warning
+        [73.42, 110, 130.81].forEach((f) => {
+          this.playBassNote(f, 1.2);
+        });
+        break;
+      }
+      case 'slide': {
+        // Wind slide whoosh
+        this.playSynthNote(320, 0.12, 'triangle', 0.15);
+        break;
+      }
+    }
+  }
+
   startSequencer() {
     this.isPlaying = true;
     this.tickAccumulator = 0;
