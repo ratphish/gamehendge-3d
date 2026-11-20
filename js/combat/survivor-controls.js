@@ -45,17 +45,57 @@ export class SurvivorControls {
     this.currentSpeed = this.baseSpeed;
     this.prevY = 0;
 
+    // Dodge Dash
+    this.isDashing = false;
+    this.dashDuration = 0.25;
+    this.dashTimer = 0;
+    this.dashActiveTimer = 0;
+    this.dashDirection = new THREE.Vector3(0, 0, -1);
+
     this.keys = {
       forward: false,
       backward: false,
       left: false,
       right: false,
       jump: false,
-      slide: false
+      slide: false,
+      dash: false
     };
 
     this.setHero('forbin');
     this.bindEvents();
+  }
+
+  triggerDash() {
+    if (this.dashTimer > 0) return false;
+
+    this.isDashing = true;
+    this.dashActiveTimer = this.dashDuration;
+    this.dashTimer = 2.2;
+
+    // Compute dash direction from keys or heading
+    const moveDir = new THREE.Vector3();
+    if (this.keys.forward) moveDir.z -= 1;
+    if (this.keys.backward) moveDir.z += 1;
+    if (this.keys.left) moveDir.x -= 1;
+    if (this.keys.right) moveDir.x += 1;
+
+    if (moveDir.lengthSq() > 0) {
+      moveDir.normalize();
+      moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
+      this.dashDirection.copy(moveDir);
+    } else {
+      this.dashDirection.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw)).normalize();
+    }
+
+    if (this.audio) {
+      this.audio.playCombatSFX('slide');
+    }
+    if (this.particles) {
+      this.particles.spawnSlideDust(this.position.x, this.position.y, this.position.z, 8);
+    }
+
+    return true;
   }
 
   setHero(heroId) {
@@ -112,6 +152,11 @@ export class SurvivorControls {
           break;
         case 'Space':
           this.keys.jump = true;
+          this.triggerDash();
+          break;
+        case 'KeyE':
+        case 'KeyQ':
+          this.triggerDash();
           break;
         case 'ShiftLeft':
         case 'ShiftRight':
@@ -155,7 +200,16 @@ export class SurvivorControls {
     let prevX = 0, prevY = 0;
 
     if (this.domElement) {
+      this.domElement.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        this.triggerDash();
+      });
+
       this.domElement.addEventListener('mousedown', (e) => {
+        if (e.button === 2) {
+          this.triggerDash();
+          return;
+        }
         isMouseDown = true;
         prevX = e.clientX;
         prevY = e.clientY;
@@ -175,7 +229,26 @@ export class SurvivorControls {
   }
 
   update(delta, timeSec = 0) {
-    const dt = Math.min(0.1, delta);
+    const dt = Math.min(5.0, delta);
+
+    // Dash timer and active movement
+    if (this.dashTimer > 0) {
+      this.dashTimer = Math.max(0, this.dashTimer - dt);
+    }
+
+    if (this.isDashing) {
+      this.dashActiveTimer -= dt;
+      const dashSpeed = this.baseSpeed * 2.5;
+      const nextX = this.position.x + this.dashDirection.x * dashSpeed * dt;
+      const nextZ = this.position.z + this.dashDirection.z * dashSpeed * dt;
+      this.position.x = nextX;
+      this.position.z = nextZ;
+
+      if (this.dashActiveTimer <= 0) {
+        this.isDashing = false;
+      }
+    }
+
     const moveDir = new THREE.Vector3();
 
     if (this.keys.forward) moveDir.z -= 1;
@@ -279,7 +352,10 @@ export class SurvivorControls {
       position: this.position,
       heading: this.yaw,
       isSliding: this.isSliding,
-      currentSpeed: this.currentSpeed
+      currentSpeed: this.currentSpeed,
+      isDashing: this.isDashing,
+      isInvulnerable: this.isDashing,
+      dashCooldownProgress: Math.max(0, this.dashTimer / 2.2)
     };
   }
 
