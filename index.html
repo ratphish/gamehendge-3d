@@ -3,35 +3,159 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gamehendge — Neo-CD-i 3D Virtual Reality Experience</title>
-  <link rel="stylesheet" href="css/style.css">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Gamehendge 3D — Survivor Roguelike & Neo-CD-i Experience</title>
+  <link rel="stylesheet" href="css/style.css?v=2">
+  <link rel="stylesheet" href="css/survivor.css?v=2">
 </head>
 <body>
   <!-- 3D WebGL Canvas Layer -->
   <div id="canvas-container"></div>
 
+  <!-- Combat 2D Floating Numbers & Particle Canvas -->
+  <canvas id="combat-fx-canvas"></canvas>
+
   <!-- CRT / Retro Scanline Overlay -->
   <div id="crt-overlay"></div>
 
-  <!-- CD-i Insert Disc / Splash Screen -->
+  <!-- CD-i Insert Disc / Main Title Screen -->
   <div id="splash-screen">
     <div class="splash-box">
       <div class="cdi-badge">PHILIPS CD-I COMPACT DISC INTERACTIVE SYSTEM</div>
       <h1 class="splash-title">GAMEHENDGE 3D</h1>
-      <p class="splash-subtitle">THE MAN WHO STEPPED INTO YESTERDAY — VIRTUAL REALITY TOUR</p>
+      <p class="splash-subtitle">THE MAN WHO STEPPED INTO YESTERDAY</p>
       
       <div class="splash-quote">
         "This technology would allow the user to enter the virtual reality of Gamehendge on their TV (or computer) and basically 'travel' around Gamehendge hearing different music and meeting different characters. For instance, you could 'fly' over the forest with the Famous Mockingbird, seeing everything from the bird's perspective and landing wherever you wanted to. You could climb the mountain with Col. Forbin, or venture into the ghetto and meet the sloth."
         <br><br><strong>— Trey Anastasio, 1993</strong>
       </div>
 
-      <button id="btn-insert-disc" class="splash-btn">INSERT DISC & ENTER GAMEHENDGE</button>
+      <div style="display: flex; flex-direction: column; gap: 14px; align-items: center;">
+        <button id="btn-mode-survivor" class="splash-btn" style="background: linear-gradient(135deg, #00f0ff 0%, #bd00ff 100%);">
+          🔥 PLAY SURVIVOR MODE (MEGABONK ROGUELIKE)
+        </button>
+        <button id="btn-insert-disc" class="splash-btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-size: 14px; padding: 12px 28px;">
+          🕊️ 1993 EXPLORER TOUR (VR EXPERIENCE)
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Interactive Neo-CD-i HUD -->
-  <div id="hud-overlay">
-    <!-- Top Bar: Telemetry & Minimap -->
+  <!-- Character Selection Modal (Survivor Mode) -->
+  <div id="hero-select-modal">
+    <div style="text-align: center;">
+      <h2 style="font-family: 'Orbitron', sans-serif; font-size: 28px; color: #ffffff; letter-spacing: 2px;">SELECT YOUR CHAMPION</h2>
+      <p style="color: #ffd700; font-size: 13px;">CHOOSE A HERO TO ENTER THE GAMEHENDGE HORDE ARENA</p>
+    </div>
+
+    <div class="hero-cards-row">
+      <div class="hero-select-card selected" data-hero="forbin">
+        <div style="font-size: 38px;">🧙‍♂️</div>
+        <div class="hero-name">COLONEL FORBIN</div>
+        <div style="font-size: 11px; color: #50e3c2;">STAFF OF FORBIN</div>
+        <div class="hero-desc">+40% XP Magnet Radius & +1.5 HP/sec Regen.</div>
+      </div>
+
+      <div class="hero-select-card" data-hero="tela">
+        <div style="font-size: 38px;">🏹</div>
+        <div class="hero-name">TELA</div>
+        <div style="font-size: 11px; color: #50e3c2;">REBEL RECURVE BOW</div>
+        <div class="hero-desc">+20% Move Speed & +45% Slope Slide Speed.</div>
+      </div>
+
+      <div class="hero-select-card" data-hero="rutherford">
+        <div style="font-size: 38px;">🦎</div>
+        <div class="hero-name">RUTHERFORD</div>
+        <div style="font-size: 11px; color: #50e3c2;">WHIRLWIND SPEAR</div>
+        <div class="hero-desc">+60 Max HP, 5 Flat Armor & +35% Knockback.</div>
+      </div>
+
+      <div class="hero-select-card" data-hero="mockingbird">
+        <div style="font-size: 38px;">🦅</div>
+        <div class="hero-name">MOCKINGBIRD</div>
+        <div style="font-size: 11px; color: #50e3c2;">DIVIDED SKY LIGHTNING</div>
+        <div class="hero-desc">Featherfall Glide Jump & +15% Attack Speed.</div>
+      </div>
+    </div>
+
+    <button id="btn-start-run" class="hero-start-btn">ENTER BATTLE ARENA ▶</button>
+  </div>
+
+  <!-- Survivor Mode In-Game HUD -->
+  <div id="survivor-hud">
+    <div class="survivor-top-bar">
+      <div class="xp-bar-container">
+        <div id="survivor-xp-fill" class="xp-bar-fill"></div>
+        <span id="survivor-xp-text" class="xp-bar-text">LVL 1 (0 / 15 XP)</span>
+      </div>
+      <div class="survivor-stats-row">
+        <div id="survivor-timer" class="stat-chip timer">⏱ 00:00</div>
+        <div id="survivor-kills" class="stat-chip kills">💀 0</div>
+      </div>
+    </div>
+
+    <div class="survivor-bottom-bar">
+      <div class="equipment-tray">
+        <div class="slot-row">
+          <span class="slot-label">WEAPONS</span>
+          <div id="weapon-slots-row" style="display: flex; gap: 8px;"></div>
+        </div>
+        <div class="slot-row">
+          <span class="slot-label">PASSIVES</span>
+          <div id="passive-slots-row" style="display: flex; gap: 8px;"></div>
+        </div>
+      </div>
+
+      <div class="player-hp-card">
+        <span id="player-hp-text" class="hp-label">HP: 100 / 100</span>
+        <div class="hp-bar-outer">
+          <div id="player-hp-fill" class="hp-bar-inner"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Holographic Upgrade Card Drafting Modal -->
+  <div id="card-draft-modal">
+    <div class="draft-header">
+      <h2 class="draft-title">LEVEL UP!</h2>
+      <p id="draft-subtitle" class="draft-subtitle">CHOOSE AN UPGRADE TO RESUME THE FLOW</p>
+    </div>
+    <div id="draft-cards-container" class="cards-container"></div>
+  </div>
+
+  <!-- Run Result: Game Over Modal -->
+  <div id="game-over-modal" class="run-result-modal">
+    <div class="result-card" style="border-color: #ff3366;">
+      <h2 class="result-title" style="color: #ff3366;">STEPPED OUT OF YESTERDAY</h2>
+      <p style="color: #cbd5e1; font-size: 14px;">You fell before Wilson's relentless horde.</p>
+      <div class="result-stats-table">
+        <div class="result-row"><span>Time Survived:</span><span id="go-time" class="result-val">00:00</span></div>
+        <div class="result-row"><span>Enemies Bonked:</span><span id="go-kills" class="result-val">0</span></div>
+        <div class="result-row"><span>Level Reached:</span><span id="go-level" class="result-val">LVL 1</span></div>
+      </div>
+      <button class="splash-btn btn-restart-run" style="background: linear-gradient(135deg, #ff3366 0%, #bd00ff 100%);">PLAY AGAIN</button>
+    </div>
+  </div>
+
+  <!-- Run Result: Victory Modal -->
+  <div id="victory-modal" class="run-result-modal">
+    <div class="result-card" style="border-color: #ffd700;">
+      <h2 class="result-title" style="color: #ffd700;">GAMEHENDGE LIBERATED!</h2>
+      <p style="color: #cbd5e1; font-size: 14px;">King Wilson has been defeated! The Helping Friendly Book is restored!</p>
+      <div class="result-stats-table">
+        <div class="result-row"><span>Liberation Time:</span><span id="vic-time" class="result-val">00:00</span></div>
+        <div class="result-row"><span>Total Kills:</span><span id="vic-kills" class="result-val">0</span></div>
+        <div class="result-row"><span>Final Level:</span><span id="vic-level" class="result-val">LVL 1</span></div>
+      </div>
+      <button class="splash-btn btn-restart-run" style="background: linear-gradient(135deg, #10b981 0%, #ffd700 100%);">PLAY AGAIN</button>
+    </div>
+  </div>
+
+  <!-- Interactive Neo-CD-i Explorer HUD (Used in Tour Mode) -->
+  <div id="hud-overlay" style="display: none;">
     <div class="top-bar">
       <div class="telemetry-deck">
         <div class="telem-item">
@@ -56,17 +180,14 @@
         </div>
       </div>
 
-      <!-- Radar Minimap -->
       <div class="radar-container">
         <div class="radar-label-n">N</div>
         <canvas id="radar-canvas"></canvas>
       </div>
     </div>
 
-    <!-- Character Interaction Proximity Prompt -->
     <div id="proximity-prompt">[E] TALK TO CHARACTER</div>
 
-    <!-- Bottom Bar: CD-i Player Deck & Navigation Guide -->
     <div class="bottom-bar">
       <div class="cdi-deck">
         <div id="disc-indicator" class="disc-indicator">
@@ -85,12 +206,11 @@
         </div>
       </div>
 
-      <!-- Quick Controls Guide -->
       <div class="quick-help">
         <strong>CONTROLS:</strong><br>
         <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / Arrows : Steer & Throttle<br>
         <kbd>Space</kbd> : Boost (Flight) / Jump (Walk)<br>
-        <kbd>Shift</kbd> : Airbrake / Glide<br>
+        <kbd>Shift</kbd> : Airbrake / Glide (Flight) / Slide (Survivor)<br>
         <kbd>T</kbd> : Switch Flight / Walk Mode<br>
         <kbd>V</kbd> : 1st / 3rd Person Camera<br>
         <kbd>E</kbd> : Talk to Character<br>
@@ -99,7 +219,7 @@
     </div>
   </div>
 
-  <!-- Character Dossier Modal -->
+  <!-- Character Dossier Modal (Tour Mode) -->
   <div id="dossier-modal">
     <div class="dossier-card">
       <button id="dossier-close-btn" class="dossier-close">&times;</button>
@@ -109,13 +229,11 @@
       </div>
       <p id="dossier-quote" class="dossier-quote">"Quote"</p>
       <p id="dossier-body" class="dossier-body">Dialogue lore content goes here...</p>
-      <div id="dossier-choices" class="dossier-choices">
-        <!-- Buttons injected dynamically -->
-      </div>
+      <div id="dossier-choices" class="dossier-choices"></div>
     </div>
   </div>
 
   <!-- App Bootstrap -->
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/main.js?v=2"></script>
 </body>
 </html>
