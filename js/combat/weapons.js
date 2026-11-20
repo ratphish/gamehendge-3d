@@ -1,0 +1,348 @@
+/**
+ * Gamehendge 3D Survivor Mode Auto-Firing Weapons System
+ * Projectile Pooling, Auto-Targeting & Passive Synergies
+ */
+
+import * as THREE from '../vendor/three.module.js';
+import { SURVIVOR_CONFIG } from './config-survivor.js';
+
+export function findNearestEnemies(playerPos, maxRange, count, enemies) {
+  if (!enemies || enemies.length === 0) return [];
+
+  const candidates = [];
+  const maxRangeSq = maxRange * maxRange;
+
+  for (const enemy of enemies) {
+    if (enemy.isDead || enemy.hp <= 0) continue;
+    const distSq = playerPos.distanceToSquared(enemy.pos);
+    if (distSq <= maxRangeSq) {
+      candidates.push({ enemy, distSq });
+    }
+  }
+
+  candidates.sort((a, b) => a.distSq - b.distSq);
+  return candidates.slice(0, count).map(c => c.enemy);
+}
+
+export class WeaponSystem {
+  constructor(scene, combatFX, particleEngine, audio) {
+    this.scene = scene;
+    this.combatFX = combatFX;
+    this.particles = particleEngine;
+    this.audio = audio;
+
+    this.equippedWeapons = new Map();
+    this.equippedPassives = new Map();
+    this.activeProjectiles = [];
+    this.timeSec = 0;
+  }
+
+  equipWeapon(id) {
+    if (!this.equippedWeapons.has(id)) {
+      this.equippedWeapons.set(id, { level: 1, timer: 0 });
+    }
+  }
+
+  upgradeWeapon(id) {
+    const w = this.equippedWeapons.get(id);
+    if (w) {
+      w.level = Math.min(SURVIVOR_CONFIG.weapons[id].maxLevel, w.level + 1);
+    } else {
+      this.equipWeapon(id);
+    }
+  }
+
+  applyPassive(id, level) {
+    this.equippedPassives.set(id, level);
+  }
+
+  calculateDamage(weaponId) {
+    const wConfig = SURVIVOR_CONFIG.weapons[weaponId];
+    const wState = this.equippedWeapons.get(weaponId);
+    const lvl = wState ? wState.level - 1 : 0;
+    const lvlData = wConfig.levels[lvl];
+    const baseDmg = lvlData.damage || lvlData.dps || 20;
+
+    // Passive multiplier (Trey's Guitar Pick)
+    let dmgMult = 1.0;
+    const pickLvl = this.equippedPassives.get('guitar_pick');
+    if (pickLvl) {
+      const pData = SURVIVOR_CONFIG.passives.guitar_pick.levels[pickLvl - 1];
+      dmgMult += pData.damageMult;
+    }
+
+    // Critical hit chance (Icculus's Glasses)
+    let isCrit = false;
+    const glassesLvl = this.equippedPassives.get('icculus_glasses');
+    if (glassesLvl) {
+      const pData = SURVIVOR_CONFIG.passives.icculus_glasses.levels[glassesLvl - 1];
+      if (Math.random() < pData.critChance) {
+        isCrit = true;
+        dmgMult *= 2.0;
+      }
+    }
+
+    return {
+      damage: Math.round(baseDmg * dmgMult),
+      isCrit
+    };
+  }
+
+  getCooldown(weaponId) {
+    const wConfig = SURVIVOR_CONFIG.weapons[weaponId];
+    const wState = this.equippedWeapons.get(weaponId);
+    const lvl = wState ? wState.level - 1 : 0;
+    let cd = wConfig.levels[lvl].cooldown || 1.0;
+
+    // Passive CDR (Mike's Bassline)
+    const bassLvl = this.equippedPassives.get('bassline');
+    if (bassLvl) {
+      const pData = SURVIVOR_CONFIG.passives.bassline.levels[bassLvl - 1];
+      cd *= (1.0 - pData.cdr);
+    }
+
+    return Math.max(0.2, cd);
+  }
+
+  getExtraProjectiles() {
+    const organLvl = this.equippedPassives.get('organ_boost');
+    if (organLvl) {
+      const pData = SURVIVOR_CONFIG.passives.organ_boost.levels[organLvl - 1];
+      return pData.extraProjectiles || 0;
+    }
+    return 0;
+  }
+
+  update(delta, playerPos, playerHeading, enemies) {
+    const dt = Math.min(2.0, delta);
+    this.timeSec += dt;
+
+    // Update weapon fire cooldowns
+    for (const [id, state] of this.equippedWeapons.entries()) {
+      if (id === 'runes') {
+        this.updateRunes(state.level, playerPos);
+        continue;
+      }
+
+      state.timer += dt;
+      const cd = this.getCooldown(id);
+      if (state.timer >= cd) {
+        state.timer = 0;
+        this.fireWeapon(id, state.level, playerPos, playerHeading, enemies);
+      }
+    }
+
+    // Update active projectiles
+    this.updateProjectiles(dt, enemies);
+  }
+
+  fireWeapon(id, level, playerPos, playerHeading, enemies) {
+    const wConfig = SURVIVOR_CONFIG.weapons[id];
+    const lvlData = wConfig.levels[level - 1];
+    const extraProj = this.getExtraProjectiles();
+
+    if (this.audio) {
+      this.audio.playCombatSFX('shot');
+    }
+
+    switch (id) {
+      case 'staff': {
+        const count = (lvlData.orbs || 1) + extraProj;
+        const targets = findNearestEnemies(playerPos, 45, count, enemies);
+        for (let i = 0; i < count; i++) {
+          const target = targets[i] || targets[0];
+          const dir = target
+            ? target.pos.clone().sub(playerPos).normalize()
+            : new THREE.Vector3(-Math.sin(playerHeading), 0, -Math.cos(playerHeading));
+
+          this.spawnProjectile({
+            type: 'staff',
+            pos: playerPos.clone().add(new THREE.Vector3(0, 1.2, 0)),
+            vel: dir.multiplyScalar(lvlData.speed || 32),
+            target,
+            damage: this.calculateDamage('staff'),
+            radius: lvlData.radius || 2.5,
+            lifetime: 2.5,
+            color: 0xffd700
+          });
+        }
+        break;
+      }
+      case 'bow': {
+        const count = (lvlData.arrows || 1) + extraProj;
+        const targets = findNearestEnemies(playerPos, 50, 1, enemies);
+        const baseDir = targets[0]
+          ? targets[0].pos.clone().sub(playerPos).normalize()
+          : new THREE.Vector3(-Math.sin(playerHeading), 0, -Math.cos(playerHeading));
+
+        for (let i = 0; i < count; i++) {
+          const spreadAngle = (i - (count - 1) / 2) * 0.12;
+          const dir = baseDir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), spreadAngle);
+
+          this.spawnProjectile({
+            type: 'bow',
+            pos: playerPos.clone().add(new THREE.Vector3(0, 1.0, 0)),
+            vel: dir.multiplyScalar(lvlData.speed || 52),
+            damage: this.calculateDamage('bow'),
+            pierce: lvlData.pierce || 3,
+            radius: 1.2,
+            lifetime: 1.5,
+            color: 0x00f0ff
+          });
+        }
+        break;
+      }
+      case 'spear': {
+        // Instant 360 cleave around player
+        const dmgInfo = this.calculateDamage('spear');
+        const radius = lvlData.radius || 7.0;
+        const knockback = lvlData.knockback || 14.0;
+
+        for (const enemy of enemies) {
+          if (enemy.isDead) continue;
+          const dist = playerPos.distanceTo(enemy.pos);
+          if (dist <= radius) {
+            enemy.takeDamage(dmgInfo.damage, dmgInfo.isCrit);
+            const knockDir = enemy.pos.clone().sub(playerPos).normalize();
+            enemy.pos.addScaledVector(knockDir, knockback * 0.15);
+          }
+        }
+        if (this.particles) {
+          this.particles.spawnDeathShards(playerPos.x, playerPos.y + 0.5, playerPos.z, 0x9013fe, 10);
+        }
+        break;
+      }
+      case 'lightning': {
+        const count = (lvlData.chains || 2) + extraProj;
+        const targets = findNearestEnemies(playerPos, 45, count, enemies);
+        const dmgInfo = this.calculateDamage('lightning');
+
+        for (const target of targets) {
+          target.takeDamage(dmgInfo.damage, dmgInfo.isCrit);
+          if (this.particles) {
+            this.particles.spawnDeathShards(target.pos.x, target.pos.y + 1, target.pos.z, 0x50e3c2, 8);
+          }
+        }
+        break;
+      }
+      case 'vortex': {
+        this.spawnProjectile({
+          type: 'vortex',
+          pos: playerPos.clone(),
+          vel: new THREE.Vector3(),
+          damage: this.calculateDamage('vortex'),
+          radius: lvlData.radius || 14,
+          lifetime: lvlData.duration || 2.5,
+          color: 0x38bdf8
+        });
+        break;
+      }
+      case 'cleaver': {
+        const count = (lvlData.cleavers || 1) + extraProj;
+        const targets = findNearestEnemies(playerPos, 40, count, enemies);
+        for (let i = 0; i < count; i++) {
+          const target = targets[i];
+          const dir = target
+            ? target.pos.clone().sub(playerPos).normalize()
+            : new THREE.Vector3(-Math.sin(playerHeading), 0, -Math.cos(playerHeading));
+
+          this.spawnProjectile({
+            type: 'cleaver',
+            pos: playerPos.clone().add(new THREE.Vector3(0, 1.5, 0)),
+            vel: dir.multiplyScalar(22).add(new THREE.Vector3(0, 8, 0)),
+            gravity: 18,
+            damage: this.calculateDamage('cleaver'),
+            radius: lvlData.radius || 5.5,
+            lifetime: 2.0,
+            color: 0xff3366
+          });
+        }
+        break;
+      }
+    }
+  }
+
+  updateRunes(level, playerPos) {
+    const wConfig = SURVIVOR_CONFIG.weapons.runes;
+    const lvlData = wConfig.levels[level - 1];
+    const runeCount = (lvlData.runes || 2) + this.getExtraProjectiles();
+    const radius = lvlData.radius || 3.8;
+    const speed = lvlData.speed || 2.8;
+
+    // Remove existing rune projectiles and recreate synchronized orbits
+    this.activeProjectiles = this.activeProjectiles.filter(p => p.type !== 'runes');
+
+    const dmgInfo = this.calculateDamage('runes');
+
+    for (let i = 0; i < runeCount; i++) {
+      const angle = this.timeSec * speed + (i * Math.PI * 2) / runeCount;
+      const rx = playerPos.x + Math.cos(angle) * radius;
+      const rz = playerPos.z + Math.sin(angle) * radius;
+
+      this.activeProjectiles.push({
+        type: 'runes',
+        pos: new THREE.Vector3(rx, playerPos.y + 1.0, rz),
+        vel: new THREE.Vector3(),
+        damage: dmgInfo,
+        radius: 1.2,
+        lifetime: 0.2, // Continuous refresh
+        isAura: true,
+        color: 0xf5a623
+      });
+    }
+  }
+
+  spawnProjectile(config) {
+    this.activeProjectiles.push({
+      ...config,
+      age: 0
+    });
+  }
+
+  updateProjectiles(dt, enemies) {
+    for (let i = this.activeProjectiles.length - 1; i >= 0; i--) {
+      const p = this.activeProjectiles[i];
+      p.age += dt;
+
+      if (p.age >= p.lifetime) {
+        this.activeProjectiles.splice(i, 1);
+        continue;
+      }
+
+      // Parabolic gravity
+      if (p.gravity) {
+        p.vel.y -= p.gravity * dt;
+      }
+
+      p.pos.addScaledVector(p.vel, dt);
+
+      if (this.particles && Math.random() < 0.4) {
+        this.particles.spawnProjectileTrail(p.pos.x, p.pos.y, p.pos.z, p.color);
+      }
+
+      // Check collision with enemies
+      if (enemies && !p.isAura) {
+        let hitSomething = false;
+        for (const enemy of enemies) {
+          if (enemy.isDead) continue;
+          const dist = p.pos.distanceTo(enemy.pos);
+          if (dist <= (p.radius + (enemy.radius || 1.0))) {
+            enemy.takeDamage(p.damage.damage, p.damage.isCrit);
+            hitSomething = true;
+
+            if (p.pierce !== undefined) {
+              p.pierce--;
+              if (p.pierce <= 0) break;
+            } else {
+              break; // Single hit projectile
+            }
+          }
+        }
+
+        if (hitSomething && (p.pierce === undefined || p.pierce <= 0)) {
+          this.activeProjectiles.splice(i, 1);
+        }
+      }
+    }
+  }
+}
