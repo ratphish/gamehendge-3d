@@ -5,6 +5,8 @@
 
 import * as THREE from './vendor/three.module.js';
 import { GAMEHENDGE_CONFIG } from './config.js';
+import { applyPSXVertexJitter } from './graphics/psx-renderer.js';
+import { getPSXCanvasTexture } from './graphics/psx-textures.js';
 
 /**
  * Procedural heightmap calculation for Gamehendge
@@ -67,6 +69,8 @@ export class GameWorld {
     this.forestGroup = new THREE.Group();
     this.ghettoGroup = new THREE.Group();
     this.mountainAltar = new THREE.Group();
+    this.arenaPropsGroup = new THREE.Group();
+    this.brazierLights = [];
 
     this.initLighting();
     this.buildTerrain();
@@ -75,11 +79,13 @@ export class GameWorld {
     this.buildSacredForest();
     this.buildGhetto();
     this.buildMountainAltar();
+    this.buildArenaEnvironment();
 
     this.scene.add(this.castleGroup);
     this.scene.add(this.forestGroup);
     this.scene.add(this.ghettoGroup);
     this.scene.add(this.mountainAltar);
+    this.scene.add(this.arenaPropsGroup);
   }
 
   initLighting() {
@@ -93,8 +99,8 @@ export class GameWorld {
     this.sunLight.castShadow = true;
     this.scene.add(this.sunLight);
 
-    // Atmospheric mist / fog
-    this.scene.fog = new THREE.FogExp2(0x202b38, 0.0035);
+    // Atmospheric mist / fog (Authentic PS1 linear distance fog)
+    this.scene.fog = new THREE.Fog(0x1a2130, 25, 140);
   }
 
   buildTerrain() {
@@ -147,6 +153,7 @@ export class GameWorld {
       metalness: 0.1,
       flatShading: true
     });
+    applyPSXVertexJitter(mat);
 
     this.terrainMesh = new THREE.Mesh(geom, mat);
     this.terrainMesh.receiveShadow = true;
@@ -414,15 +421,165 @@ export class GameWorld {
     return false;
   }
 
-  update(delta, timeSec = 0) {
+  buildArenaEnvironment() {
+    this.arenaPropsGroup.position.set(0, 0, 0);
+
+    const stoneTex = getPSXCanvasTexture('ruins');
+    const barkTex = getPSXCanvasTexture('bark');
+    const foliageTex = getPSXCanvasTexture('foliage');
+
+    const treeTrunkMat = new THREE.MeshStandardMaterial({
+      color: 0x5a3e2a,
+      map: barkTex || null,
+      roughness: 0.9,
+      flatShading: true
+    });
+    applyPSXVertexJitter(treeTrunkMat);
+
+    const foliageMat = new THREE.MeshStandardMaterial({
+      color: 0x23522f,
+      map: foliageTex || null,
+      roughness: 0.8,
+      flatShading: true
+    });
+    applyPSXVertexJitter(foliageMat);
+
+    const stoneMat = new THREE.MeshStandardMaterial({
+      color: 0x7a828e,
+      map: stoneTex || null,
+      roughness: 0.8,
+      flatShading: true
+    });
+    applyPSXVertexJitter(stoneMat);
+
+    // 1. Scatter 30 Sacred Forest Pine Trees in the Survivor Arena (radius 30 to 180)
+    const treePositions = [
+      [-35, 45], [25, 55], [-50, 75], [45, 80], [-20, 95], [60, 45],
+      [-65, 30], [35, 110], [-45, 120], [10, 130], [-75, 90], [70, 95],
+      [-15, 35], [50, 25], [-85, 60], [80, 70], [-30, 140], [40, 145],
+      [-60, 155], [65, 130], [-100, 40], [95, 50], [-90, 110], [90, 115],
+      [-10, 70], [15, 85], [-40, 60], [30, 70], [-70, 130], [75, 150]
+    ];
+
+    const trunkGeom = new THREE.CylinderGeometry(0.7, 1.1, 7, 5);
+    const cone1Geom = new THREE.ConeGeometry(4.0, 7, 5);
+    const cone2Geom = new THREE.ConeGeometry(3.0, 5.5, 5);
+    const cone3Geom = new THREE.ConeGeometry(2.0, 4.0, 5);
+
+    treePositions.forEach(([tx, tz]) => {
+      const ty = calculateTerrainHeight(tx, tz);
+      const tree = new THREE.Group();
+      tree.position.set(tx, ty, tz);
+
+      const trunk = new THREE.Mesh(trunkGeom, treeTrunkMat);
+      trunk.position.y = 3.5;
+      tree.add(trunk);
+
+      const tier1 = new THREE.Mesh(cone1Geom, foliageMat);
+      tier1.position.y = 8;
+      tree.add(tier1);
+
+      const tier2 = new THREE.Mesh(cone2Geom, foliageMat);
+      tier2.position.y = 11.5;
+      tree.add(tier2);
+
+      const tier3 = new THREE.Mesh(cone3Geom, foliageMat);
+      tier3.position.y = 14.5;
+      tree.add(tier3);
+
+      this.arenaPropsGroup.add(tree);
+
+      this.colliders.push({
+        tag: 'arena_tree',
+        x: tx,
+        z: tz,
+        radius: 1.5
+      });
+    });
+
+    // 2. Ancient Stone Ruins & Monoliths
+    const ruinLocations = [
+      { x: -25, z: 80, sx: 4, sy: 9, sz: 3, rot: 0.3 },
+      { x: 35, z: 65, sx: 3, sy: 12, sz: 3, rot: -0.2 },
+      { x: -45, z: 105, sx: 5, sy: 7, sz: 4, rot: 0.6 },
+      { x: 20, z: 115, sx: 8, sy: 5, sz: 2.5, rot: -0.5 },
+      { x: 0, z: 140, sx: 10, sy: 6, sz: 3, rot: 0 },
+      { x: -60, z: 50, sx: 3.5, sy: 10, sz: 3.5, rot: 0.4 },
+      { x: 55, z: 90, sx: 4, sy: 8, sz: 3, rot: -0.4 },
+      { x: -15, z: 160, sx: 7, sy: 6, sz: 3, rot: 0.2 }
+    ];
+
+    ruinLocations.forEach(r => {
+      const ry = calculateTerrainHeight(r.x, r.z);
+      const geom = new THREE.BoxGeometry(r.sx, r.sy, r.sz);
+      const mesh = new THREE.Mesh(geom, stoneMat);
+      mesh.position.set(r.x, ry + r.sy * 0.45, r.z);
+      mesh.rotation.y = r.rot;
+      this.arenaPropsGroup.add(mesh);
+
+      this.colliders.push({
+        tag: 'arena_ruin',
+        x: r.x,
+        z: r.z,
+        radius: Math.max(r.sx, r.sz) * 0.55
+      });
+    });
+
+    // 3. Flickering Iron Braziers with dynamic PointLights
+    const brazierPositions = [
+      [-15, 55], [15, 55],
+      [-30, 95], [30, 95],
+      [0, 115], [0, 75]
+    ];
+
+    const ironMat = new THREE.MeshStandardMaterial({ color: 0x1f2329, roughness: 0.7, metalness: 0.8 });
+    applyPSXVertexJitter(ironMat);
+    const fireMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+
+    brazierPositions.forEach(([bx, bz], i) => {
+      const by = calculateTerrainHeight(bx, bz);
+      const bGroup = new THREE.Group();
+      bGroup.position.set(bx, by, bz);
+
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.2, 2.2, 6), ironMat);
+      base.position.y = 1.1;
+      bGroup.add(base);
+
+      const fire = new THREE.Mesh(new THREE.OctahedronGeometry(0.55, 0), fireMat);
+      fire.position.y = 2.4;
+      bGroup.add(fire);
+
+      const pLight = new THREE.PointLight(0xff7722, 2.8, 25);
+      pLight.position.set(0, 3.0, 0);
+      pLight.baseIntensity = 2.8;
+      pLight.flickerOffset = i * 1.7;
+      bGroup.add(pLight);
+      this.brazierLights.push(pLight);
+
+      this.arenaPropsGroup.add(bGroup);
+    });
+  }
+
+  update(deltaOrTime, timeSec = null) {
+    const time = (timeSec !== null) ? timeSec : deltaOrTime;
+
     // Animate water subtle surface pulsing
     if (this.waterMesh) {
-      this.waterMesh.position.y = GAMEHENDGE_CONFIG.world.waterLevel + Math.sin(timeSec * 1.5) * 0.15;
+      this.waterMesh.position.y = GAMEHENDGE_CONFIG.world.waterLevel + Math.sin(time * 1.5) * 0.15;
+    }
+
+    // Flicker braziers
+    if (this.brazierLights) {
+      for (const light of this.brazierLights) {
+        light.intensity = light.baseIntensity +
+          Math.sin(time * 7.5 + light.flickerOffset) * 0.4 +
+          Math.cos(time * 13.2 + light.flickerOffset * 2.1) * 0.25;
+      }
     }
 
     // Animate campfire, book hover, etc.
     for (const obj of this.animatedObjects) {
-      obj.update(timeSec);
+      obj.update(time);
     }
   }
 }
