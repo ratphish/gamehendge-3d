@@ -5,12 +5,12 @@
 
 import * as THREE from './vendor/three.module.js';
 import { GameAudioEngine } from './audio.js';
-import { GameWorld } from './world.js';
-import { EntityManager } from './entities.js';
-import { PlayerControls } from './controls.js';
-import { GameUI } from './ui.js';
-import { SurvivorManager } from './survivor-manager.js';
-import { PSXPostProcessor } from './graphics/psx-renderer.js';
+import { GameWorld } from './world.js?v=20';
+import { EntityManager } from './entities.js?v=20';
+import { PlayerControls } from './controls.js?v=20';
+import { GameUI } from './ui.js?v=20';
+import { SurvivorManager } from './survivor-manager.js?v=20';
+import { PSXPostProcessor } from './graphics/psx-renderer.js?v=20';
 
 class GamehendgeApp {
   constructor() {

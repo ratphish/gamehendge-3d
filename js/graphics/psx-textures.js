@@ -7,11 +7,11 @@ import * as THREE from '../vendor/three.module.js';
 
 export const PALETTES = {
   terrain: [
-    [42, 54, 38],   // Dark moss
-    [58, 74, 48],   // Olive green
-    [78, 98, 62],   // Forest grass
-    [98, 82, 58],   // Dry dirt
-    [120, 102, 74]  // Earthen clay
+    [78, 112, 68],   // Vibrant moss
+    [104, 142, 88],  // Olive meadow grass
+    [132, 172, 108], // Bright sunlight grass
+    [148, 130, 92],  // Earthen path
+    [172, 150, 112]  // Clay cobblestone highlight
   ],
   stone: [
     [32, 36, 44],   // Deep slate
@@ -33,10 +33,10 @@ export const PALETTES = {
     [82, 138, 84]   // Sunlit tip
   ],
   lizard: [
-    [18, 52, 38],   // Deep scale
-    [32, 84, 58],   // Emerald hide
-    [52, 126, 84],  // Ridge scale
-    [88, 168, 112]  // Underbelly highlight
+    [32, 88, 54],   // Deep scale
+    [52, 126, 84],  // Emerald hide
+    [88, 178, 114], // Ridge scale
+    [128, 218, 148] // Bright underbelly highlight
   ]
 };
 

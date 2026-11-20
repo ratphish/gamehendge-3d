@@ -123,23 +123,23 @@ export class GameWorld {
       pos.setY(i, vy);
 
       // Vertex color gradient
-      let r = 0.22, g = 0.45, b = 0.24; // Lush grassland
+      let r = 0.52, g = 0.78, b = 0.50; // Lush grassland
 
       if (vy > 75) {
         // Mountain snow peak
-        r = 0.92; g = 0.95; b = 1.0;
+        r = 0.95; g = 0.98; b = 1.0;
       } else if (vy > 45) {
         // Rocky high crags
-        r = 0.52; g = 0.52; b = 0.58;
+        r = 0.68; g = 0.68; b = 0.72;
       } else if (vy < 2.5) {
         // Sandy beach / riverbed
-        r = 0.55; g = 0.52; b = 0.38;
+        r = 0.78; g = 0.74; b = 0.55;
       } else if (vx > 90 && vz > 60) {
         // Ghetto murky cobblestone
-        r = 0.35; g = 0.32; b = 0.35;
+        r = 0.48; g = 0.45; b = 0.48;
       } else if (vx > 90 && vz < -90) {
         // Wilson's dark volcanic bedrock
-        r = 0.28; g = 0.24; b = 0.28;
+        r = 0.38; g = 0.32; b = 0.38;
       }
 
       colors[i * 3] = r;
@@ -150,7 +150,13 @@ export class GameWorld {
     geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     geom.computeVertexNormals();
 
+    const terrainTex = getPSXCanvasTexture('terrain');
+    if (terrainTex) {
+      terrainTex.repeat.set(50, 50);
+    }
+
     const mat = new THREE.MeshStandardMaterial({
+      map: terrainTex || null,
       vertexColors: true,
       roughness: 0.85,
       metalness: 0.1,
@@ -457,7 +463,7 @@ export class GameWorld {
 
     // 1. Scatter Sacred Forest Pine Trees in the Survivor Arena
     const treePositions = [
-      [-14, 45], [16, 48], [-18, 65], [18, 65], [-12, 75], [14, 80],
+      [-10, 72], [10, 72], [-14, 45], [16, 48], [-18, 65], [18, 65],
       [-35, 45], [25, 55], [-50, 75], [45, 80], [-20, 95], [60, 45],
       [-65, 30], [35, 110], [-45, 120], [10, 130], [-75, 90], [70, 95],
       [-15, 35], [50, 25], [-85, 60], [80, 70], [-30, 140], [40, 145],
@@ -503,6 +509,8 @@ export class GameWorld {
 
     // 2. Ancient Stone Ruins & Monoliths
     const ruinLocations = [
+      { x: -14, z: 66, sx: 4, sy: 12, sz: 3, rot: 0.35 },
+      { x: 14, z: 66, sx: 3.5, sy: 14, sz: 3.5, rot: -0.28 },
       { x: -16, z: 52, sx: 4, sy: 12, sz: 3, rot: 0.35 },
       { x: 18, z: 54, sx: 3.5, sy: 14, sz: 3.5, rot: -0.28 },
       { x: -25, z: 80, sx: 5, sy: 11, sz: 3.5, rot: 0.3 },
@@ -533,10 +541,11 @@ export class GameWorld {
 
     // 3. Flickering Iron Braziers with dynamic PointLights
     const brazierPositions = [
+      [-6, 75], [6, 75],
       [-8, 52], [8, 52],
       [-15, 68], [15, 68],
       [-30, 95], [30, 95],
-      [0, 115], [0, 85]
+      [0, 115]
     ];
 
     const ironMat = new THREE.MeshStandardMaterial({ color: 0x1f2329, roughness: 0.7, metalness: 0.8 });

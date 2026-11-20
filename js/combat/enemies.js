@@ -203,23 +203,24 @@ export class EnemyManager {
     if (enemy.type === 'soldier') {
       // 1. Lizard Foot Soldier (Biped with snout, mace, shield, legs)
       const skinMat = new THREE.MeshStandardMaterial({
-        color: 0x2e8b57, // Sea green lizard scale
+        color: 0x48b870, // Vibrant olive-emerald lizard scale
         map: lizardTex || null,
-        roughness: 0.7,
+        roughness: 0.65,
+        emissive: 0x0c2514, // Subtle inner reptile glow
         flatShading: true
       });
       applyPSXVertexJitter(skinMat);
 
       const armorMat = new THREE.MeshStandardMaterial({
-        color: 0x4a3c28, // Leather harness
-        roughness: 0.8,
+        color: 0x6e5238, // Leather harness
+        roughness: 0.75,
         flatShading: true
       });
       applyPSXVertexJitter(armorMat);
 
       const metalMat = new THREE.MeshStandardMaterial({
-        color: 0x8a929e,
-        roughness: 0.4,
+        color: 0x9ca6b4,
+        roughness: 0.35,
         metalness: 0.7,
         flatShading: true
       });
@@ -289,8 +290,9 @@ export class EnemyManager {
     } else if (enemy.type === 'beast') {
       // 2. Corrupted Multibeast (Quadruped with horns and tail)
       const beastMat = new THREE.MeshStandardMaterial({
-        color: 0x8b3a2b, // Rufous brown hide
-        roughness: 0.85,
+        color: 0xb84e36, // Rufous auburn hide
+        roughness: 0.8,
+        emissive: 0x1f0a05,
         flatShading: true
       });
       applyPSXVertexJitter(beastMat);
@@ -344,17 +346,17 @@ export class EnemyManager {
     } else if (enemy.type === 'guard') {
       // 3. Royal Castle Guard (Armored Humanoid with Horned Helmet & Halberd)
       const steelMat = new THREE.MeshStandardMaterial({
-        color: 0x6e7888,
+        color: 0x8894a6,
         map: ruinsTex || null,
         metalness: 0.8,
-        roughness: 0.4,
+        roughness: 0.35,
         flatShading: true
       });
       applyPSXVertexJitter(steelMat);
 
       const surcoatMat = new THREE.MeshStandardMaterial({
-        color: 0xa81c2e, // Royal crimson
-        roughness: 0.8,
+        color: 0xc82035, // Bright royal crimson
+        roughness: 0.75,
         flatShading: true
       });
       applyPSXVertexJitter(surcoatMat);

@@ -5,9 +5,9 @@
 
 import * as THREE from './vendor/three.module.js';
 import { SURVIVOR_CONFIG, xpNeededForLevel } from './combat/config-survivor.js';
-import { SurvivorControls } from './combat/survivor-controls.js';
-import { WeaponSystem } from './combat/weapons.js';
-import { EnemyManager } from './combat/enemies.js';
+import { SurvivorControls } from './combat/survivor-controls.js?v=20';
+import { WeaponSystem } from './combat/weapons.js?v=20';
+import { EnemyManager } from './combat/enemies.js?v=20';
 import { GemManager } from './combat/gems.js';
 import { CombatFX } from './combat/combat-fx.js';
 import { ParticleEngine } from './combat/particles.js';
