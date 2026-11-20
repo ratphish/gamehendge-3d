@@ -452,8 +452,9 @@ export class GameWorld {
     });
     applyPSXVertexJitter(stoneMat);
 
-    // 1. Scatter 30 Sacred Forest Pine Trees in the Survivor Arena (radius 30 to 180)
+    // 1. Scatter Sacred Forest Pine Trees in the Survivor Arena
     const treePositions = [
+      [-14, 45], [16, 48], [-18, 65], [18, 65], [-12, 75], [14, 80],
       [-35, 45], [25, 55], [-50, 75], [45, 80], [-20, 95], [60, 45],
       [-65, 30], [35, 110], [-45, 120], [10, 130], [-75, 90], [70, 95],
       [-15, 35], [50, 25], [-85, 60], [80, 70], [-30, 140], [40, 145],
@@ -461,10 +462,10 @@ export class GameWorld {
       [-10, 70], [15, 85], [-40, 60], [30, 70], [-70, 130], [75, 150]
     ];
 
-    const trunkGeom = new THREE.CylinderGeometry(0.7, 1.1, 7, 5);
-    const cone1Geom = new THREE.ConeGeometry(4.0, 7, 5);
-    const cone2Geom = new THREE.ConeGeometry(3.0, 5.5, 5);
-    const cone3Geom = new THREE.ConeGeometry(2.0, 4.0, 5);
+    const trunkGeom = new THREE.CylinderGeometry(1.0, 1.5, 9, 5);
+    const cone1Geom = new THREE.ConeGeometry(5.2, 8.5, 5);
+    const cone2Geom = new THREE.ConeGeometry(4.0, 6.8, 5);
+    const cone3Geom = new THREE.ConeGeometry(2.6, 5.0, 5);
 
     treePositions.forEach(([tx, tz]) => {
       const ty = calculateTerrainHeight(tx, tz);
@@ -472,19 +473,19 @@ export class GameWorld {
       tree.position.set(tx, ty, tz);
 
       const trunk = new THREE.Mesh(trunkGeom, treeTrunkMat);
-      trunk.position.y = 3.5;
+      trunk.position.y = 4.5;
       tree.add(trunk);
 
       const tier1 = new THREE.Mesh(cone1Geom, foliageMat);
-      tier1.position.y = 8;
+      tier1.position.y = 10.0;
       tree.add(tier1);
 
       const tier2 = new THREE.Mesh(cone2Geom, foliageMat);
-      tier2.position.y = 11.5;
+      tier2.position.y = 14.5;
       tree.add(tier2);
 
       const tier3 = new THREE.Mesh(cone3Geom, foliageMat);
-      tier3.position.y = 14.5;
+      tier3.position.y = 18.2;
       tree.add(tier3);
 
       this.arenaPropsGroup.add(tree);
@@ -493,20 +494,22 @@ export class GameWorld {
         tag: 'arena_tree',
         x: tx,
         z: tz,
-        radius: 1.5
+        radius: 2.0
       });
     });
 
     // 2. Ancient Stone Ruins & Monoliths
     const ruinLocations = [
-      { x: -25, z: 80, sx: 4, sy: 9, sz: 3, rot: 0.3 },
-      { x: 35, z: 65, sx: 3, sy: 12, sz: 3, rot: -0.2 },
-      { x: -45, z: 105, sx: 5, sy: 7, sz: 4, rot: 0.6 },
-      { x: 20, z: 115, sx: 8, sy: 5, sz: 2.5, rot: -0.5 },
-      { x: 0, z: 140, sx: 10, sy: 6, sz: 3, rot: 0 },
-      { x: -60, z: 50, sx: 3.5, sy: 10, sz: 3.5, rot: 0.4 },
-      { x: 55, z: 90, sx: 4, sy: 8, sz: 3, rot: -0.4 },
-      { x: -15, z: 160, sx: 7, sy: 6, sz: 3, rot: 0.2 }
+      { x: -16, z: 52, sx: 4, sy: 12, sz: 3, rot: 0.35 },
+      { x: 18, z: 54, sx: 3.5, sy: 14, sz: 3.5, rot: -0.28 },
+      { x: -25, z: 80, sx: 5, sy: 11, sz: 3.5, rot: 0.3 },
+      { x: 35, z: 65, sx: 4, sy: 15, sz: 4, rot: -0.2 },
+      { x: -45, z: 105, sx: 6, sy: 9, sz: 4.5, rot: 0.6 },
+      { x: 20, z: 115, sx: 9, sy: 7, sz: 3, rot: -0.5 },
+      { x: 0, z: 140, sx: 12, sy: 8, sz: 4, rot: 0 },
+      { x: -60, z: 50, sx: 4, sy: 12, sz: 4, rot: 0.4 },
+      { x: 55, z: 90, sx: 5, sy: 10, sz: 3.5, rot: -0.4 },
+      { x: -15, z: 160, sx: 8, sy: 8, sz: 3.5, rot: 0.2 }
     ];
 
     ruinLocations.forEach(r => {
@@ -527,9 +530,10 @@ export class GameWorld {
 
     // 3. Flickering Iron Braziers with dynamic PointLights
     const brazierPositions = [
-      [-15, 55], [15, 55],
+      [-8, 52], [8, 52],
+      [-15, 68], [15, 68],
       [-30, 95], [30, 95],
-      [0, 115], [0, 75]
+      [0, 115], [0, 85]
     ];
 
     const ironMat = new THREE.MeshStandardMaterial({ color: 0x1f2329, roughness: 0.7, metalness: 0.8 });

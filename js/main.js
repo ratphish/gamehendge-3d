@@ -28,7 +28,7 @@ class GamehendgeApp {
   initScene() {
     // 1. Scene
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a1420);
+    this.scene.background = new THREE.Color(0x1a2130);
 
     // 2. Camera
     const aspect = window.innerWidth / window.innerHeight;
