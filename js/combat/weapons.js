@@ -25,11 +25,12 @@ export function findNearestEnemies(playerPos, maxRange, count, enemies) {
 }
 
 export class WeaponSystem {
-  constructor(scene, combatFX, particleEngine, audio) {
+  constructor(scene, combatFX, particleEngine, audio, gems = null) {
     this.scene = scene;
     this.combatFX = combatFX;
     this.particles = particleEngine;
     this.audio = audio;
+    this.gems = gems;
 
     this.equippedWeapons = new Map();
     this.equippedPassives = new Map();
@@ -163,6 +164,7 @@ export class WeaponSystem {
             damage: this.calculateDamage('staff'),
             radius: lvlData.radius || 2.5,
             lifetime: 2.5,
+            homingSpeed: lvlData.speed || 32,
             color: 0xffd700
           });
         }
@@ -269,26 +271,35 @@ export class WeaponSystem {
     const radius = lvlData.radius || 3.8;
     const speed = lvlData.speed || 2.8;
 
-    // Remove existing rune projectiles and recreate synchronized orbits
-    this.activeProjectiles = this.activeProjectiles.filter(p => p.type !== 'runes');
+    let runes = this.activeProjectiles.filter(p => p.type === 'runes');
+    if (runes.length !== runeCount) {
+      this.activeProjectiles = this.activeProjectiles.filter(p => p.type !== 'runes');
+      runes = [];
+      for (let i = 0; i < runeCount; i++) {
+        const rune = {
+          type: 'runes',
+          pos: new THREE.Vector3(),
+          vel: new THREE.Vector3(),
+          damage: this.calculateDamage('runes'),
+          radius: 1.2,
+          lifetime: Infinity,
+          isAura: true,
+          color: 0xf5a623,
+          hitCooldowns: new Map()
+        };
+        this.activeProjectiles.push(rune);
+        runes.push(rune);
+      }
+    }
 
     const dmgInfo = this.calculateDamage('runes');
-
     for (let i = 0; i < runeCount; i++) {
       const angle = this.timeSec * speed + (i * Math.PI * 2) / runeCount;
       const rx = playerPos.x + Math.cos(angle) * radius;
       const rz = playerPos.z + Math.sin(angle) * radius;
-
-      this.activeProjectiles.push({
-        type: 'runes',
-        pos: new THREE.Vector3(rx, playerPos.y + 1.0, rz),
-        vel: new THREE.Vector3(),
-        damage: dmgInfo,
-        radius: 1.2,
-        lifetime: 0.2, // Continuous refresh
-        isAura: true,
-        color: 0xf5a623
-      });
+      const rune = runes[i];
+      rune.pos.set(rx, playerPos.y + 1.0, rz);
+      rune.damage = dmgInfo;
     }
   }
 
@@ -302,9 +313,9 @@ export class WeaponSystem {
   updateProjectiles(dt, enemies) {
     for (let i = this.activeProjectiles.length - 1; i >= 0; i--) {
       const p = this.activeProjectiles[i];
-      p.age += dt;
+      p.age = (p.age || 0) + dt;
 
-      if (p.age >= p.lifetime) {
+      if (p.lifetime !== Infinity && p.age >= p.lifetime) {
         this.activeProjectiles.splice(i, 1);
         continue;
       }
@@ -314,33 +325,126 @@ export class WeaponSystem {
         p.vel.y -= p.gravity * dt;
       }
 
-      p.pos.addScaledVector(p.vel, dt);
+      // Homing guidance for projectiles with target
+      if (p.target && !p.target.isDead) {
+        const toTarget = p.target.pos.clone().sub(p.pos);
+        toTarget.y = 0;
+        if (toTarget.lengthSq() > 0.001) {
+          toTarget.normalize();
+          const speed = p.homingSpeed || p.vel.length() || 30;
+          p.vel.lerp(toTarget.multiplyScalar(speed), Math.min(1.0, 6.0 * dt));
+        }
+      }
+
+      // Movement (auras are moved by their orbit controller)
+      if (!p.isAura) {
+        p.pos.addScaledVector(p.vel, dt);
+      }
 
       if (this.particles && Math.random() < 0.4) {
         this.particles.spawnProjectileTrail(p.pos.x, p.pos.y, p.pos.z, p.color);
       }
 
-      // Check collision with enemies
-      if (enemies && !p.isAura) {
-        let hitSomething = false;
-        for (const enemy of enemies) {
-          if (enemy.isDead) continue;
-          const dist = p.pos.distanceTo(enemy.pos);
-          if (dist <= (p.radius + (enemy.radius || 1.0))) {
-            enemy.takeDamage(p.damage.damage, p.damage.isCrit);
-            hitSomething = true;
+      // 1. Vortex Projectiles (Sustains for duration, pulls enemies & gems, tick damage)
+      if (p.type === 'vortex' || p.isVortex) {
+        p.tickTimer = (p.tickTimer || 0) + dt;
+        const doTick = p.tickTimer >= 0.25;
+        if (doTick) {
+          p.tickTimer = 0;
+        }
 
-            if (p.pierce !== undefined) {
-              p.pierce--;
-              if (p.pierce <= 0) break;
-            } else {
-              break; // Single hit projectile
+        if (enemies) {
+          for (const enemy of enemies) {
+            if (enemy.isDead) continue;
+            const dir = p.pos.clone().sub(enemy.pos);
+            dir.y = 0;
+            const dist = dir.length();
+            if (dist <= p.radius) {
+              if (dist > 0.5) {
+                dir.normalize();
+                const pullSpeed = p.pullStrength || 12;
+                enemy.pos.addScaledVector(dir, Math.min(dist - 0.5, pullSpeed * dt));
+              }
+              if (doTick) {
+                enemy.takeDamage(p.damage.damage, p.damage.isCrit);
+              }
             }
           }
         }
+        continue; // Vortex lives until p.age >= p.lifetime
+      }
 
-        if (hitSomething && (p.pierce === undefined || p.pierce <= 0)) {
-          this.activeProjectiles.splice(i, 1);
+      // 2. Aura Projectiles (e.g., Runes orbit)
+      if (p.isAura) {
+        if (p.hitCooldowns) {
+          for (const [enemy, cd] of p.hitCooldowns.entries()) {
+            if (cd > 0) {
+              p.hitCooldowns.set(enemy, cd - dt);
+            }
+          }
+        }
+        if (enemies) {
+          for (const enemy of enemies) {
+            if (enemy.isDead) continue;
+            const dist = p.pos.distanceTo(enemy.pos);
+            if (dist <= (p.radius + (enemy.radius || 1.0))) {
+              const cd = (p.hitCooldowns && p.hitCooldowns.get(enemy)) || 0;
+              if (cd <= 0) {
+                enemy.takeDamage(p.damage.damage, p.damage.isCrit);
+                if (p.hitCooldowns) {
+                  p.hitCooldowns.set(enemy, 0.3);
+                }
+              }
+            }
+          }
+        }
+        continue;
+      }
+
+      // 3. Collision with enemies for direct / splash / piercing projectiles
+      if (enemies) {
+        // Splash Projectiles (Staff, Cleaver)
+        if (p.type === 'staff' || p.type === 'cleaver') {
+          const directHit = enemies.some(e => !e.isDead && p.pos.distanceTo(e.pos) <= (p.radius + (e.radius || 1.0)));
+          if (directHit) {
+            for (const enemy of enemies) {
+              if (enemy.isDead) continue;
+              const dist = p.pos.distanceTo(enemy.pos);
+              if (dist <= (p.radius + (enemy.radius || 1.0))) {
+                enemy.takeDamage(p.damage.damage, p.damage.isCrit);
+              }
+            }
+            if (this.particles) {
+              this.particles.spawnExplosion(p.pos.x, p.pos.y, p.pos.z, p.color || 0xffd700, 12);
+            }
+            if (this.combatFX) {
+              this.combatFX.addScreenShake(0.15);
+            }
+            this.activeProjectiles.splice(i, 1);
+            continue;
+          }
+        } else {
+          // Standard / Piercing projectiles (e.g. Bow)
+          let hitSomething = false;
+          for (const enemy of enemies) {
+            if (enemy.isDead) continue;
+            const dist = p.pos.distanceTo(enemy.pos);
+            if (dist <= (p.radius + (enemy.radius || 1.0))) {
+              enemy.takeDamage(p.damage.damage, p.damage.isCrit);
+              hitSomething = true;
+              if (p.pierce !== undefined) {
+                p.pierce--;
+                if (p.pierce <= 0) break;
+              } else {
+                break;
+              }
+            }
+          }
+
+          if (hitSomething && (p.pierce === undefined || p.pierce <= 0)) {
+            this.activeProjectiles.splice(i, 1);
+            continue;
+          }
         }
       }
     }

@@ -37,6 +37,8 @@ export class Gem {
   destroy() {
     if (this.mesh && this.scene) {
       this.scene.remove(this.mesh);
+      if (this.mesh.geometry) this.mesh.geometry.dispose();
+      if (this.mesh.material) this.mesh.material.dispose();
     }
   }
 }

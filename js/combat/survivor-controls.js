@@ -5,14 +5,27 @@
 
 import * as THREE from '../vendor/three.module.js';
 import { SURVIVOR_CONFIG } from './config-survivor.js';
+import { createForbinModel } from '../entities.js';
 
 export class SurvivorControls {
-  constructor(camera, domElement, world, particles = null, audio = null) {
+  constructor(camera, domElement, world, particles = null, audio = null, combatFX = null, scene = null) {
     this.camera = camera;
     this.domElement = domElement;
     this.world = world;
     this.particles = particles;
     this.audio = audio;
+    this.combatFX = combatFX;
+    this.scene = scene;
+
+    this.avatar = null;
+    if (this.scene) {
+      try {
+        this.avatar = createForbinModel(true);
+        this.scene.add(this.avatar);
+      } catch (e) {
+        // Safe fallback in headless test runs
+      }
+    }
 
     this.selectedHero = 'forbin';
     this.baseSpeed = SURVIVOR_CONFIG.player.baseSpeed;
@@ -58,6 +71,14 @@ export class SurvivorControls {
 
     this.baseSpeed = speed;
     this.slideSpeed = slide;
+
+    if (this.avatar && hero.color) {
+      this.avatar.traverse(child => {
+        if (child.isMesh && child.material && child.material.color && child.geometry && child.geometry.type === 'CylinderGeometry') {
+          child.material.color.setHex(hero.color);
+        }
+      });
+    }
     this.currentSpeed = speed;
     this.gravity = hero.lowGravity ? 18.0 : 36.0;
   }
@@ -173,7 +194,7 @@ export class SurvivorControls {
       const nextProbeX = this.position.x + moveDir.x * 2.0;
       const nextProbeZ = this.position.z + moveDir.z * 2.0;
       const nextTerrainY = this.world ? this.world.getTerrainHeight(nextProbeX, nextProbeZ) : 0;
-      const isDownhill = nextTerrainY <= currentTerrainY + 0.1;
+      const isDownhill = (currentTerrainY - nextTerrainY) > 0.08;
 
       if (this.keys.slide && isDownhill) {
         this.isSliding = true;
@@ -242,7 +263,16 @@ export class SurvivorControls {
       }
     }
 
-    // Camera follow (isometric-tilt chase cam)
+    // Avatar visual position & walk animation
+    if (this.avatar) {
+      this.avatar.position.set(this.position.x, rawTerrainY, this.position.z);
+      this.avatar.rotation.y = this.yaw + Math.PI;
+      if (this.avatar.animate) {
+        this.avatar.animate(timeSec, isMoving || this.isSliding);
+      }
+    }
+
+    // Camera follow (isometric-tilt chase cam with screen shake)
     this.updateCamera();
 
     return {
@@ -256,9 +286,14 @@ export class SurvivorControls {
   updateCamera() {
     if (!this.camera) return;
     const dist = 14.0;
-    const camX = this.position.x + Math.sin(this.yaw) * dist * Math.cos(this.pitch);
-    const camZ = this.position.z + Math.cos(this.yaw) * dist * Math.cos(this.pitch);
-    const camY = this.position.y + dist * Math.sin(this.pitch) + 2.0;
+    let camX = this.position.x + Math.sin(this.yaw) * dist * Math.cos(this.pitch);
+    let camZ = this.position.z + Math.cos(this.yaw) * dist * Math.cos(this.pitch);
+    let camY = this.position.y + dist * Math.sin(this.pitch) + 2.0;
+
+    if (this.combatFX && this.combatFX.shakeOffset) {
+      camX += this.combatFX.shakeOffset.x;
+      camY += this.combatFX.shakeOffset.y;
+    }
 
     this.camera.position.set(camX, camY, camZ);
     this.camera.lookAt(this.position.x, this.position.y + 1.4, this.position.z);

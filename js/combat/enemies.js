@@ -220,6 +220,7 @@ export class EnemyManager {
 
   update(delta, playerPos, elapsedSec) {
     const dt = Math.min(0.2, delta);
+    const deadEnemies = [];
 
     // Check Boss Spawns
     if (elapsedSec >= 300 && !this.hosemasterSpawned) {
@@ -244,7 +245,9 @@ export class EnemyManager {
       if (e.isDead) {
         if (e.mesh && this.scene) {
           this.scene.remove(e.mesh);
+          if (e.mat) e.mat.dispose();
         }
+        deadEnemies.push(e);
         this.activeEnemies.splice(i, 1);
         continue;
       }
@@ -284,6 +287,8 @@ export class EnemyManager {
         }
       }
     }
+
+    return { deadEnemies };
   }
 
   checkPlayerContact(playerPos, playerRadius = 1.4) {

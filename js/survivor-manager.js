@@ -41,10 +41,10 @@ export class SurvivorManager {
     // Subsystems
     this.combatFX = new CombatFX();
     this.particles = new ParticleEngine(this.scene);
-    this.controls = new SurvivorControls(this.camera, this.domElement, this.world, this.particles, this.audio);
-    this.weapons = new WeaponSystem(this.scene, this.combatFX, this.particles, this.audio);
-    this.enemies = new EnemyManager(this.scene, this.world, this.combatFX, this.particles, this.audio);
+    this.controls = new SurvivorControls(this.camera, this.domElement, this.world, this.particles, this.audio, this.combatFX, this.scene);
     this.gems = new GemManager(this.scene, this.audio, this.particles);
+    this.weapons = new WeaponSystem(this.scene, this.combatFX, this.particles, this.audio, this.gems);
+    this.enemies = new EnemyManager(this.scene, this.world, this.combatFX, this.particles, this.audio);
     this.upgrades = new UpgradeManager();
 
     // 2D FX Canvas
@@ -118,6 +118,7 @@ export class SurvivorManager {
 
     // Equip starting weapon
     this.weapons.equipWeapon(hero.startingWeapon);
+    this.updateItemSlots();
 
     // Hide hero select, show survivor HUD
     const heroModal = document.getElementById('hero-select-modal');
@@ -139,6 +140,10 @@ export class SurvivorManager {
     this.player.timer = 0;
     this.player.iFrameTimer = 0;
 
+    if (this.controls) {
+      this.controls.position.set(0, 15, 60);
+    }
+
     this.weapons.equippedWeapons.clear();
     this.weapons.equippedPassives.clear();
     this.weapons.activeProjectiles = [];
@@ -156,6 +161,7 @@ export class SurvivorManager {
       g.destroy();
     }
     this.gems.activeGems = [];
+    this.updateItemSlots();
 
     // Reset modals
     const gameOverModal = document.getElementById('game-over-modal');
@@ -191,25 +197,24 @@ export class SurvivorManager {
     this.weapons.update(dt, playerPos, telem.heading, this.enemies.activeEnemies);
 
     // 4. Enemies Update & Spawning
-    this.enemies.update(dt, playerPos, this.player.timer);
+    const enemyUpdate = this.enemies.update(dt, playerPos, this.player.timer);
+    const deadEnemies = (enemyUpdate && enemyUpdate.deadEnemies) || [];
 
     // Check enemy deaths for XP gem drops & kills
-    for (const e of this.enemies.activeEnemies) {
-      if (e.isDead) {
-        this.player.kills++;
-        const tier = e.type === 'hosemaster' ? 'gold' : e.type === 'guard' ? 'purple' : 'cyan';
-        this.gems.spawnGem(e.pos.x, e.pos.y, e.pos.z, tier);
+    for (const e of deadEnemies) {
+      this.player.kills++;
+      const tier = e.type === 'hosemaster' ? 'gold' : e.type === 'guard' ? 'purple' : 'cyan';
+      this.gems.spawnGem(e.pos.x, e.pos.y, e.pos.z, tier);
 
-        // If defeated Wilson -> Victory!
-        if (e.type === 'wilson') {
-          this.triggerVictory();
-          return;
-        }
+      // If defeated Wilson -> Victory!
+      if (e.type === 'wilson') {
+        this.triggerVictory();
+        return;
+      }
 
-        // If defeated Hosemaster -> Free 3-card draft chest!
-        if (e.type === 'hosemaster') {
-          this.triggerCardDraft(true);
-        }
+      // If defeated Hosemaster -> Free 3-card draft chest!
+      if (e.type === 'hosemaster') {
+        this.triggerCardDraft(true);
       }
     }
 
@@ -302,11 +307,19 @@ export class SurvivorManager {
   }
 
   applyCardChoice(card) {
+    if (card.rarity === 'rare') {
+      this.addXP(50);
+    }
+
     if (card.type === 'weapon') {
       this.weapons.upgradeWeapon(card.id);
+      if (card.rarity === 'legendary') {
+        this.weapons.upgradeWeapon(card.id);
+      }
     } else if (card.type === 'passive') {
       const curLvl = this.weapons.equippedPassives.get(card.id) || 0;
-      const nextLvl = curLvl + 1;
+      const increment = card.rarity === 'legendary' ? 2 : 1;
+      const nextLvl = Math.min(SURVIVOR_CONFIG.passives[card.id].maxLevel, curLvl + increment);
       this.weapons.applyPassive(card.id, nextLvl);
 
       // Apply immediate passive stat modifications
@@ -325,6 +338,8 @@ export class SurvivorManager {
         this.addXP(100);
       }
     }
+
+    this.updateItemSlots();
   }
 
   triggerGameOver() {
@@ -378,9 +393,6 @@ export class SurvivorManager {
       hpBar.style.width = `${hpPct}%`;
     }
     if (hpText) hpText.innerText = `HP: ${Math.round(this.player.hp)} / ${this.player.maxHp}`;
-
-    // Weapon & Passive slots
-    this.updateItemSlots();
   }
 
   updateItemSlots() {
