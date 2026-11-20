@@ -29,11 +29,20 @@ A high-polish, interactive 3D web application bringing Trey Anastasio's legendar
   - *Fishman's Doughnut* (+Move & Slide Speed)
   - *Lizard Heart* (+Max HP & Regen)
   - *Icculus's Glasses* (+Crit Chance)
-- **Visual Juice & Game Feel**:
-  - Floating spring-animated damage numbers (`"45"`, `"128 CRIT!"`) on an optimized 60 FPS 2D canvas overlay.
-  - Screen shake trauma engine on critical hits and boss attacks.
-  - Additive Three.js particle bursts when enemies shatter into crystalline shards.
-  - Downhill momentum slope-sliding (`Shift`) down mountain crags with speedlines and dust plumes.
+- **PlayStation 1 (PSX) Retro Visual Engine**:
+  - Authentic 320×240 low-resolution rendering scaled with crisp `image-rendering: pixelated`.
+  - True PS1 subpixel vertex snapping (affine polygon wobble) on all materials.
+  - 16-bit Bayer matrix dithering post-processing shader replicating the PS1 RGB555 framebuffer.
+  - Procedural 32×32 pixel textures (Sacred pine needles, cobblestone paths, mossy ruins, scaly lizard hides).
+  - Dense Sacred Forest pine groves, stone monoliths, and flickering braziers with dynamic point lights.
+- **Combat & Movement Juice**:
+  - `Space` / `Right-Click` **Dodge Dash** with 0.3s invulnerability frames and afterimage particles.
+  - Visual slash ribbons for melee sweeps (Whirlwind Spear, Cleaver).
+  - Floating musical notes (`♪ ♫ ♬`) popping on critical strikes.
+  - Downhill momentum slope-sliding (`Shift`) with dynamic FOV and anime speed lines.
+- **In-Run RPG Story Quests & PS1 Memory Card UI**:
+  - 4-Stage Questline: *Breach the Garrison* $\to$ *Recover 3 Pages of the Helping Friendly Book* $\to$ *Slay The Hosemaster* $\to$ *Defeat King Wilson*.
+  - PS1-style dialogue cut-ins with character portraits (The Sloth, Col. Forbin, Errand Boy, Icculus).
 - **Epic Scaling Waves & Boss Battles**:
   - Foot Soldiers (00:00) $\to$ Corrupted Multibeasts (02:30) $\to$ Royal Guards (05:00)
   - 05:00 Mini-Boss: **The Watchful Hosemaster** (sprays high-pressure water stream; defeat drops a 3-upgrade chest!)

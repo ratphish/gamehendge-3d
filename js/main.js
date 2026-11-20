@@ -10,6 +10,7 @@ import { EntityManager } from './entities.js';
 import { PlayerControls } from './controls.js';
 import { GameUI } from './ui.js';
 import { SurvivorManager } from './survivor-manager.js';
+import { PSXPostProcessor } from './graphics/psx-renderer.js';
 
 class GamehendgeApp {
   constructor() {
@@ -33,12 +34,12 @@ class GamehendgeApp {
     const aspect = window.innerWidth / window.innerHeight;
     this.camera = new THREE.PerspectiveCamera(65, aspect, 0.5, 1200);
 
-    // 3. Renderer
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    // 3. Renderer (Crisp PS1 Non-Antialiased Pixel Scaling)
+    this.renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.setPixelRatio(1); // 1:1 pixel rendering for authentic low-res crunch
+    this.renderer.domElement.style.imageRendering = 'pixelated';
+    this.renderer.shadowMap.enabled = false; // PS1 did not have dynamic shadow maps
 
     if (this.container) {
       this.container.appendChild(this.renderer.domElement);
@@ -63,6 +64,9 @@ class GamehendgeApp {
 
     // High-Polish Survivor Mode Manager
     this.survivor = new SurvivorManager(this.scene, this.camera, this.renderer.domElement, this.world, this.audio);
+
+    // PSX Affine Dither & Low-Res Post-Processor
+    this.psxPostProcessor = new PSXPostProcessor(this.renderer);
   }
 
   bindStartScreen() {
@@ -119,6 +123,9 @@ class GamehendgeApp {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+      if (this.psxPostProcessor) {
+        this.psxPostProcessor.setSize(window.innerWidth, window.innerHeight);
+      }
       if (this.ui) {
         this.ui.setupRadarCanvas();
       }
@@ -144,8 +151,12 @@ class GamehendgeApp {
       this.ui.update(telemetry);
     }
 
-    // Three.js Render Pass
-    this.renderer.render(this.scene, this.camera);
+    // PS1 Dither & Low-Res Render Pass
+    if (this.psxPostProcessor) {
+      this.psxPostProcessor.render(this.scene, this.camera);
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 }
 

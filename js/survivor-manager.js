@@ -12,6 +12,7 @@ import { GemManager } from './combat/gems.js';
 import { CombatFX } from './combat/combat-fx.js';
 import { ParticleEngine } from './combat/particles.js';
 import { UpgradeManager } from './combat/upgrades.js';
+import { QuestManager } from './combat/quests.js';
 
 export class SurvivorManager {
   constructor(scene, camera, domElement, world, audio) {
@@ -46,6 +47,9 @@ export class SurvivorManager {
     this.weapons = new WeaponSystem(this.scene, this.combatFX, this.particles, this.audio, this.gems);
     this.enemies = new EnemyManager(this.scene, this.world, this.combatFX, this.particles, this.audio);
     this.upgrades = new UpgradeManager();
+    this.quests = new QuestManager();
+    this.quests.onQuestComplete = (quest) => this.showDialogueMilestone(quest);
+    this.lastTelem = null;
 
     // 2D FX Canvas
     this.fxCanvas = document.getElementById('combat-fx-canvas');
@@ -183,6 +187,7 @@ export class SurvivorManager {
 
     // 1. Controls & Player Physics
     const telem = this.controls.update(dt, timeSec);
+    this.lastTelem = telem;
     const playerPos = telem.position;
 
     // 2. Health Regen & i-frames
@@ -203,6 +208,7 @@ export class SurvivorManager {
     // Check enemy deaths for XP gem drops & kills
     for (const e of deadEnemies) {
       this.player.kills++;
+      this.quests.registerKill(e.type, 1);
       const tier = e.type === 'hosemaster' ? 'gold' : e.type === 'guard' ? 'purple' : 'cyan';
       this.gems.spawnGem(e.pos.x, e.pos.y, e.pos.z, tier);
 
@@ -219,7 +225,7 @@ export class SurvivorManager {
     }
 
     // Check Enemy Contact Damage to Player
-    if (this.player.iFrameTimer <= 0) {
+    if (this.player.iFrameTimer <= 0 && !telem.isInvulnerable) {
       const contact = this.enemies.checkPlayerContact(playerPos, 1.4);
       if (contact.hit) {
         const effectiveDamage = Math.max(1, contact.damage - this.player.armor);
@@ -393,6 +399,42 @@ export class SurvivorManager {
       hpBar.style.width = `${hpPct}%`;
     }
     if (hpText) hpText.innerText = `HP: ${Math.round(this.player.hp)} / ${this.player.maxHp}`;
+
+    // Update PSX Quest Tracker
+    const questTitle = document.getElementById('quest-title-text');
+    const questProg = document.getElementById('quest-progress-text');
+    const currentQuest = this.quests.getCurrentQuest();
+    if (questTitle && currentQuest) questTitle.innerText = currentQuest.title;
+    if (questProg) questProg.innerText = this.quests.getProgressText();
+
+    // Update PSX Dodge Dash Pip
+    const dashBar = document.getElementById('dash-pip-bar');
+    if (dashBar && this.lastTelem) {
+      const p = this.lastTelem.dashCooldownProgress || 0;
+      dashBar.style.width = p <= 0 ? '100%' : `${Math.round((1 - p) * 100)}%`;
+    }
+  }
+
+  showDialogueMilestone(quest) {
+    if (this.audio) this.audio.playCombatSFX('level_up');
+    this.addXP(150);
+
+    const modal = document.getElementById('psx-dialog-modal');
+    const portrait = document.getElementById('dialog-portrait');
+    const speaker = document.getElementById('dialog-speaker');
+    const text = document.getElementById('dialog-text');
+
+    if (modal && portrait && speaker && text) {
+      portrait.innerText = quest.portrait || '📜';
+      speaker.innerText = quest.speaker || 'HERALD';
+      text.innerText = quest.dialogue || 'A quest objective was accomplished!';
+      modal.classList.add('active');
+
+      if (this.dialogueTimeout) clearTimeout(this.dialogueTimeout);
+      this.dialogueTimeout = setTimeout(() => {
+        modal.classList.remove('active');
+      }, 5000);
+    }
   }
 
   updateItemSlots() {
