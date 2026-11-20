@@ -1,105 +1,156 @@
 # Design Doc: Gamehendge 3D "Megabonk" Survivor Mode (High-Polish 3D Action Roguelike)
 
 ## 1. Intent & Overview
-This project upgrades the Gamehendge 3D web application with a high-polish, adrenaline-packed **3D action roguelike horde survivor mode** inspired by **Megabonk**, **Risk of Rain 2**, and **Vampire Survivors**. 
+This project adds a high-polish, adrenaline-packed **3D action roguelike horde survivor mode** inspired by **Megabonk**, **Risk of Rain 2**, and **Vampire Survivors** to the Gamehendge 3D web application.
 
 The goal is a visually dazzling, juicy, fast-paced arcade experience featuring:
-- High visual punch: glowing emissive materials, particle bursts, screen shake, bloom glow, and dynamic lighting.
-- Juicy combat feel: floating spring-animated damage numbers, white enemy flash on hit, knockback physics, and crystalline death explosions.
-- Fluid 3D movement: fast strafing, jumping, and momentum downhill slope-sliding with dust trails.
-- Automatic Phish-themed weaponry with synergistic upgrades across 4 active weapon slots and 4 passive item slots.
-- Epic horde waves culminating in mid-run boss encounters (*The Watchful Hosemaster*) and a 10-minute final showdown with *King Wilson*.
-- Clean dual-mode architecture: A unified title screen allowing the player to enter **SURVIVOR MODE** or the peaceful **1993 EXPLORER TOUR**.
+- **High visual punch**: Glowing emissive materials, additive particle bursts, screen shake, and vibrant multi-tone terrain lighting.
+- **Juicy combat feel**: Floating 60fps spring-animated damage numbers, white enemy flash on hit, knockback physics, and crystalline death explosions.
+- **Fluid 3D movement**: Fast strafing, jumping, and momentum downhill slope-sliding with dust trails.
+- **Automatic Phish-themed weaponry**: Up to 4 active weapons and 4 passive items with multi-level upgrade branches.
+- **Epic horde waves**: Dynamic scaling waves culminating in *The Watchful Hosemaster* (05:00) and *King Wilson* (10:00).
+- **Clean dual-mode architecture**: Title screen allows seamless selection between **SURVIVOR MODE** and the original **1993 EXPLORER TOUR**.
 
 ---
 
-## 2. Visual Systems & Game Feel ("Juice")
+## 2. Core Roguelike Formulas & Player Base Stats
 
-### 2.1 Post-Processing & Lighting
-- **Bloom & Glow**: Emissive materials on magical projectiles, XP gems, weapon runes, and enemy eyes with post-processing bloom for neon-glow aesthetics.
-- **Dynamic Shadows & Rim Lighting**: High-contrast directional lighting with Fresnel rim highlights on character models and enemies, ensuring clean readability even with 50+ enemies on screen.
-- **Atmospheric Palette**:
-  - Sky/Fog: Deep twilight synthwave gradient (indigo, magenta, amber horizon).
-  - Biome-specific mood lights (sacred emerald forest glow, misty purple ghetto lanterns, volcanic crimson fortress spotlights).
+### 2.1 Player Base Stats
+- **Health**: 100 HP base.
+- **Movement Speed**: 22 units/sec running, 46 units/sec downhill sliding.
+- **Jump Force**: 14 units/sec (gravity 36 units/sec²).
+- **Invulnerability Time**: 0.5s after taking damage (visual player blink).
+- **Contact Damage Cooldown**: Enemies inflict damage at most once every 0.5s on contact.
 
-### 2.2 Combat Hit Feedback & Particle Systems
-- **Enemy Hit Reaction**: Instant white-flash shader toggle on damage + directional physics knockback impulse.
-- **Screen Shake Engine**: Exponential trauma decay camera shake on heavy attacks, player damage, and boss spawns.
-- **Floating Damage Numbers**:
-  - Rendered in a high-performance 2D/WebGL billboard layer.
-  - White for standard hits, bold glowing gold/red for critical strikes (`"142 CRIT!"`).
-  - Spring-physics pop: numbers launch upward, scale up quickly, and fade out over 0.6s.
-- **Particle System**:
-  - *Enemy Shatter*: Defeated enemies explode into 12-20 glowing geometric shards that scatter with physics before dissipating.
-  - *Projectile Trails*: Flowing ribbon trails, sparks, and energy motes behind arrows and staff bolts.
-  - *Slide Dust*: When holding Slide (`Shift`) down mountain slopes, a plume of dust particles and speedlines trails behind the character.
+### 2.2 Mathematical Progression Curves
+- **Level-Up XP Formula**:
+  $$\text{XP Needed}(L) = \lfloor 15 \times L^{1.35} \rfloor$$
+  *(Lv 1 $\to$ 2: 15 XP, Lv 2 $\to$ 3: 38 XP, Lv 3 $\to$ 4: 66 XP, Lv 4 $\to$ 5: 98 XP, Lv 5 $\to$ 6: 134 XP...)*
+- **Gem XP Tiers**:
+  - Cyan Flow Gem: 10 XP
+  - Purple Flow Gem: 35 XP
+  - Gold Flow Gem: 100 XP
+- **Enemy Scaling Over Elapsed Time ($t$ in seconds)**:
+  - $\text{HP Multiplier} = 1.0 + 0.12 \times \lfloor t / 30 \rfloor$
+  - $\text{Speed Multiplier} = \min(1.4, 1.0 + 0.03 \times \lfloor t / 60 \rfloor)$
 
 ---
 
-## 3. Playable Hero Roster
+## 3. Playable Hero Roster & Controls
 
-Each character features a distinct, high-quality 3D model, animated running/sliding poses, and unique starting weapons/passives:
-
+### 3.1 Hero Roster
 | Character | Title | Passive Trait | Starting Weapon |
 | :--- | :--- | :--- | :--- |
-| **Colonel Forbin** | The Long Island Pilgrim | **Surrender to the Flow**: +40% XP Gem collection radius, +15% Health regeneration. | **Mystic Staff**: Homing golden orbs. |
-| **Tela** | Rebel of the Forest | **Multibeast Agility**: +25% Move Speed, +50% Downhill Slide Velocity. | **Rebel Recurve Bow**: Rapid piercing arrows. |
-| **Rutherford the Brave** | Knight of the Lizards | **Plate of Lizards**: +60 Max HP, +35% Melee Knockback, starts with 5 Armor. | **Whirlwind Spear**: 360° sweeping cleave. |
-| **The Famous Mockingbird** | Sacred Aviary Courier | **Featherfall Glide**: Low-gravity jump glide, +20% Attack Speed. | **Sky Dive Chimes**: Aerial chain lightning strikes. |
+| **Colonel Forbin** | The Long Island Pilgrim | **Surrender to the Flow**: +40% XP Gem collection radius, +1.5 HP/sec regeneration. | **Pilgrim Staff** |
+| **Tela** | Rebel of the Forest | **Multibeast Agility**: +20% Move Speed, +45% Downhill Slide Velocity. | **Rebel Recurve Bow** |
+| **Rutherford the Brave** | Knight of the Lizards | **Plate of Lizards**: +60 Max HP, +35% Melee Knockback, starts with 5 Armor (flat damage reduction). | **Whirlwind Spear** |
+| **The Famous Mockingbird** | Sacred Aviary Courier | **Featherfall Glide**: Low-gravity jump glide, +15% Weapon Attack Speed. | **Sky Dive Chimes** |
+
+### 3.2 Survivor Controls (`SurvivorControls`)
+- Built as an isolated controller in `js/combat/survivor-controls.js` (keeps `js/controls.js` Explorer Mode 100% untouched).
+- `W` / `A` / `S` / `D`: 360-degree ground strafe/run.
+- `Space`: Jump. (Mockingbird: hold space to glide).
+- `Shift` / `C`: **Downhill Slope Slide**: Accelerates down terrain gradients up to 46 units/sec with trailing dust particle sprites.
+- Mouse: 3rd-person isometric-tilt chase camera (orbiting 14 units behind, 8 units above player).
 
 ---
 
-## 4. Arsenal & Upgrade Card Drafting
+## 4. Weapons & Passives System (4 Weapon Slots + 4 Passive Slots)
 
-Players can equip up to **4 Weapons** and **4 Passive Items**. Weapons fire automatically on internal cooldowns, auto-targeting the nearest enemies in range.
+Weapons fire automatically at the nearest enemy in range. If no enemy is in range, directional weapons fire in the player's movement direction.
 
 ### 4.1 Weapons (Levels 1 to 8)
-1. **Pilgrim Staff**: Launches 1–5 homing arcane orbs with explosive impact radius.
-2. **Rebel Recurve Bow**: Shoots rapid piercing arrows in player facing direction, penetrating 3–8 enemies.
-3. **Whirlwind Spear**: Rapid 360° circular sweep dealing high knockback to all nearby enemies.
-4. **Helping Friendly Runes**: 2–6 glowing ancient runic book pages orbiting the player as a protective buzzsaw.
-5. **Divided Sky Lightning**: Calls down thunderbolts from the heavens that fork between 2–5 foes.
-6. **Electrolux Vortex**: Deploys a spinning vacuum vortex that damages, pulls in enemies, and vacuums all XP gems across the arena.
-7. **The Sloth's Cleaver**: Hurls heavy spinning meat cleavers in high parabolic arcs with massive area damage.
+1. **Pilgrim Staff**: Launches homing arcane energy orbs with splash damage.
+   - *Base*: Cooldown 1.2s, Damage 26, Speed 32, Orbs 1, Radius 2.5.
+   - *Upgrades*: +1 orb at Lv 3, 5, 7; +20% damage at Lv 2, 4, 6, 8.
+2. **Rebel Recurve Bow**: Rapid piercing arrows.
+   - *Base*: Cooldown 0.8s, Damage 18, Speed 52, Pierces 3.
+   - *Upgrades*: +1 arrow at Lv 3, 6; +1 pierce at Lv 2, 5; -0.06s cooldown per level.
+3. **Whirlwind Spear**: 360° spinning melee arc dealing heavy knockback.
+   - *Base*: Cooldown 1.4s, Damage 36, Radius 7.0, Knockback 14.
+   - *Upgrades*: +15% radius & +20% damage per level.
+4. **Helping Friendly Runes**: Ancient glowing runic pages orbiting the player.
+   - *Base*: Orbiting count 2, Damage 16 per tick, Orbit Radius 3.8.
+   - *Upgrades*: +1 rune at Lv 3, 5, 7; +15% damage & +0.4 orbit radius per level.
+5. **Divided Sky Lightning**: Calls down thunderbolts that chain between foes.
+   - *Base*: Cooldown 2.2s, Damage 55, Chains 2.
+   - *Upgrades*: +1 chain target at Lv 3, 6; +20 damage per level; -0.15s cooldown.
+6. **Electrolux Vortex**: Deploys a mini vacuum that damages, pulls enemies, and vacuums all XP gems across the arena.
+   - *Base*: Cooldown 6.0s, Duration 2.2s, DPS 22, Pull Radius 14.
+   - *Upgrades*: +0.5s duration, +12 DPS, -0.4s cooldown per level.
+7. **The Sloth's Cleaver**: Throws heavy rotating cleavers in high parabolic arcs with area blast.
+   - *Base*: Cooldown 2.6s, Damage 80, Blast Radius 5.5.
+   - *Upgrades*: +1 cleaver at Lv 4, 7; +25 damage & +1.0 radius per level.
 
 ### 4.2 Passive Items (Levels 1 to 5)
-- **Trey's Guitar Pick**: +15% / 30% / 45% / 60% / 75% Damage to all weapons.
-- **Mike's Bassline**: +10% / 20% / 30% / 40% / 50% Attack Speed (CDR).
-- **Page's Organ Boost**: +1 Projectile count to all multi-shot weapons.
-- **Fishman's Doughnut**: +15% Move Speed & +25% Slide Speed.
-- **Lizard Heart**: +30 Max HP & +2 HP/sec Regeneration.
-- **Icculus's Glasses**: +30% Critical Hit Chance (2x damage).
+1. **Trey's Guitar Pick**: +15% / 30% / 45% / 60% / 75% Damage to all weapons.
+2. **Mike's Bassline**: -10% / 18% / 26% / 34% / 42% Attack Cooldown (CDR).
+3. **Page's Organ Boost**: +1 Projectile count to multi-projectile weapons (Lv 1, 3, 5).
+4. **Fishman's Doughnut**: +12% / 24% / 36% / 48% / 60% Move Speed & Slide Speed.
+5. **Lizard Heart**: +30 / 60 / 90 / 120 / 150 Max HP & +1 / 2 / 3 / 4 / 5 HP/sec Regeneration.
+6. **Icculus's Glasses**: +12% / 24% / 36% / 48% / 60% Critical Hit Chance (2.0x Damage).
 
-### 4.3 Level-Up Drafting UI
-- When the XP bar fills, gameplay smoothly freezes with a cinematic time-stop effect.
-- A 3D holographic card deck appears presenting **3 randomized cards**.
-- Cards have rarity borders (*Common Cyan, Rare Gold, Legendary Prismatic*), animated 3D hover tilt, and crisp stat descriptions.
-- Selecting a card instantly applies the upgrade with a satisfying audio chime and resumes gameplay.
-
----
-
-## 5. Enemy Hordes & Boss Encounters
-
-Enemies spawn in scaling clusters around the arena perimeter, using spatial flocking AI to swarm the player while navigating around terrain obstacles:
-
-1. **Wilson's Foot Soldiers (00:00–02:30)**:
-   - Fast, low HP, swarming in large packs of 15–30.
-2. **Corrupted Multibeasts (02:30–05:00)**:
-   - Quadruped predators that leap toward the player in sudden bursts.
-3. **Mini-Boss: The Watchful Hosemaster (05:00 Spawn)**:
-   - Massive armored hound guardian with 4,000 HP.
-   - Sprays high-pressure water stream causing heavy knockback.
-   - Defeating him spawns a **Legendary Treasure Chest** containing 3 random upgrades!
-4. **Citadel Royal Guards (05:00–09:30)**:
-   - Heavy shielded lizard warriors with high armor and blocking front shields.
-5. **Final Boss: King Wilson, Duke of Lizards (10:00 Spawn)**:
-   - Gargantuan tyrant towering 12 units high with glowing royal mantle.
-   - Multi-phase attack pattern: Crimson eye-beams, seismic shockwave stomps, and royal guard summons.
-   - Victory upon defeating Wilson triggers the Gamehendge Liberation sequence!
+### 4.3 Card Drafting Rules
+- Max 4 weapons and 4 passives.
+- Unowned weapons do not appear in drafts once all 4 weapon slots are occupied.
+- Max-level items are excluded from drafts.
+- If all equipped items are maxed, drafts offer **Lizard Rations** (instant +35 HP heal) and **King's Bounty** (+100 XP).
+- Card Rarities: Common 70% (Standard upgrade), Rare 25% (Boosts stat + grants +50 XP), Legendary 5% (Grants 2 instant levels to the rolled item).
 
 ---
 
-## 6. Architecture & File Structure
+## 5. Enemy Hordes, Arena Bounds & Boss Encounters
+
+### 5.1 Combat Arena & Spawn Volumes
+- Combat takes place within a 200-unit circular radius around the center of Gamehendge (`Math.hypot(x, z) <= 200`). A shimmering runic barrier softly repels the player if they touch the boundary.
+- Enemies spawn in rings 38 to 55 units away from the player (just outside camera view).
+- Active Enemy Cap: 60 simultaneous enemies maximum to guarantee 60 FPS performance.
+
+### 5.2 Enemy Types
+1. **Wilson's Foot Soldiers (00:00–02:30)**: HP 35, Speed 16, Damage 8. Swarm in clusters of 6–12.
+2. **Corrupted Multibeasts (02:30–05:00)**: HP 90, Speed 21, Damage 16. Fast charging quadrupeds.
+3. **Citadel Royal Guards (05:00–09:30)**: HP 240, Speed 13, Damage 24. Heavy armored lizards with front shields.
+
+### 5.3 Boss Encounters
+1. **Mini-Boss: The Watchful Hosemaster (05:00 Spawn)**:
+   - HP: 3,500. Speed: 14.
+   - Attack: Every 4 seconds, fires a telegraphed high-pressure water stream dealing 20 damage + 25 knockback.
+   - Defeat: Explodes into a **Legendary Treasure Chest** that instantly opens a 3-choice upgrade modal without spending XP!
+2. **Final Boss: King Wilson, Duke of Lizards (10:00 Spawn)**:
+   - HP: 12,000. Towering 12-unit-high royal boss.
+   - *Phase 1 (100%–50% HP)*: Sweeping crimson eye-laser barrage (30 damage) + summons 4 Royal Guards every 18s.
+   - *Phase 2 (50%–0% HP)*: Enraged speed (+25%), ground shockwave stomps (40 damage, jump to avoid).
+   - Defeating Wilson triggers the **Gamehendge Liberation** victory sequence!
+
+---
+
+## 6. Visual Effects Engine ("Juice") & Web Audio FX
+
+### 6.1 60 FPS Combat FX Canvas
+- A single full-viewport 2D overlay `<canvas id="combat-fx-canvas">` receives 3D screen-projected coordinates:
+  - **Damage Numbers**: Floating numbers popping upward with spring easing, colored white for standard hits, glowing gold/red for crits (`"124 CRIT!"`).
+  - **Screen Shake**: Decaying offset vector applied to camera position on heavy hits.
+  - **Crit Flash**: Subtle white vignetting on massive strikes.
+
+### 6.2 Three.js Additive Particle Engine
+- Custom instanced particle system using Three.js `Points` and `AdditiveBlending`:
+  - 120 reusable particle pool for enemy death crystalline shards.
+  - Projectile trail ribbons and spark motes.
+  - Downhill slope-sliding dust puffs.
+
+### 6.3 Procedural Combat Sound FX
+- Synthesized via Web Audio API `AudioContext`:
+  - Laser/Staff projectile shot (quick high-pitch sweep).
+  - Bow arrow twang (resonant noise sweep).
+  - Melee whoosh (filtered low-mid sweep).
+  - Enemy hit impact (snappy thud/crunch).
+  - Flow Gem pickup (ascending pentatonic chimes).
+  - Level-Up (glorious synthesized brass fanfare).
+  - Player hurt (grunty low buzz).
+
+---
+
+## 7. Technical Implementation Structure
 
 ```
 d:/gamehenge/
@@ -109,27 +160,15 @@ d:/gamehenge/
 │   └── survivor.css           # High-polish Survivor HUD, damage numbers, glowing cards, XP bar
 └── js/
     ├── combat/
-    │   ├── damage-text.js     # Floating spring-animated damage numbers & critical hit FX
-    │   ├── particles.js       # Shard explosions, projectile trails, slide dust particles
+    │   ├── combat-fx.js       # 2D canvas damage numbers, screenshake, crit pops
+    │   ├── particles.js       # Additive particle pool for explosions, trails, slide dust
     │   ├── weapons.js         # Weapon behaviors, firing cooldowns, projectile pooling, targeting
-    │   ├── enemies.js         # Enemy horde spawner, flocking AI, collision, boss logic
+    │   ├── enemies.js         # Enemy horde spawner, enemy types, AI pathing, boss logic
     │   ├── gems.js            # Flow XP gems, magnet pull physics, pooling
-    │   └── upgrades.js        # Upgrade card database, card drafting UI, stat calculations
+    │   ├── upgrades.js        # Upgrade card database, card drafting UI, stat calculations
+    │   └── survivor-controls.js # Dedicated survivor movement & slope sliding controller
     ├── survivor-manager.js    # Survivor state machine, game timer, kill counter, level-up loop
-    ├── controls.js            # Enhanced with momentum downhill slope sliding (Shift)
     └── main.js                # Mode switcher: Survivor Mode vs Explorer Tour Mode
 ```
 
----
-
-## 7. Verification Plan
-1. **Automated Unit Tests**:
-   - `tests/weapons.test.js`: Weapon cooldowns, auto-targeting math, projectile damage.
-   - `tests/enemies.test.js`: Wave progression timer, enemy HP scaling, boss spawn triggers.
-   - `tests/upgrades.test.js`: Leveling XP curve, card pool filtering, passive stat boosts.
-2. **Live Visual & Browser Gameplay Verification**:
-   - Verify character selection screen and smooth entry into 3D arena.
-   - Verify 3D slope-sliding down mountain slopes with dust particle effects.
-   - Verify auto-firing weapons hit enemy swarms with white flash, floating damage numbers, and particle shard explosions.
-   - Verify XP gems vacuum to player, level-up card drafting modal appears, and upgrades apply cleanly.
-   - Verify 60 FPS performance with 50+ active enemies and particles.
+- **Headless Node.js Unit Testing**: All combat math, weapon cooldown logic, enemy scaling, and card drafting are pure JavaScript functions decoupled from Three.js scene graphs, allowing 100% test coverage with `npm test`.
