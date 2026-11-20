@@ -8,6 +8,7 @@ import * as THREE from '../vendor/three.module.js';
 export class CombatFX {
   constructor() {
     this.activeNumbers = [];
+    this.activeNotes = [];
     this.trauma = 0;
     this.maxShakeOffset = 0.8;
     this.shakeOffset = new THREE.Vector3();
@@ -27,6 +28,19 @@ export class CombatFX {
     });
   }
 
+  addMusicalNote(x, y, z, symbol = '♪') {
+    this.activeNotes.push({
+      x: x + (Math.random() - 0.5) * 1.0,
+      y: y + 0.8,
+      z: z + (Math.random() - 0.5) * 1.0,
+      symbol,
+      age: 0,
+      maxAge: 0.8,
+      vy: 4.5,
+      rot: (Math.random() - 0.5) * 0.4
+    });
+  }
+
   addScreenShake(amount) {
     this.trauma = Math.min(1.0, this.trauma + amount);
   }
@@ -43,6 +57,18 @@ export class CombatFX {
 
       if (num.age >= num.maxAge) {
         this.activeNumbers.splice(i, 1);
+      }
+    }
+
+    // Update floating musical notes
+    for (let i = this.activeNotes.length - 1; i >= 0; i--) {
+      const note = this.activeNotes[i];
+      note.age += dt;
+      note.y += note.vy * dt;
+      note.vy = Math.max(0.8, note.vy - dt * 4.0);
+
+      if (note.age >= note.maxAge) {
+        this.activeNotes.splice(i, 1);
       }
     }
 
@@ -102,6 +128,38 @@ export class CombatFX {
         ctx.shadowBlur = 10;
       }
       ctx.fillText(text, 0, 0);
+
+      ctx.restore();
+    }
+
+    // Render musical notes
+    ctx.font = 'bold 22px monospace';
+    for (const note of this.activeNotes) {
+      this._projVec.set(note.x, note.y, note.z);
+      this._projVec.project(camera);
+      if (this._projVec.z > 1.0) continue;
+
+      const sx = (this._projVec.x * 0.5 + 0.5) * width;
+      const sy = (-(this._projVec.y * 0.5) + 0.5) * height;
+
+      const progress = note.age / note.maxAge;
+      const scale = 1.0 + Math.sin(progress * Math.PI) * 0.4;
+      const alpha = Math.max(0, 1.0 - progress * 1.1);
+
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(note.rot + progress * 0.5);
+      ctx.scale(scale, scale);
+      ctx.globalAlpha = alpha;
+
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#000000';
+      ctx.strokeText(note.symbol, 0, 0);
+
+      ctx.fillStyle = '#ffd700';
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 8;
+      ctx.fillText(note.symbol, 0, 0);
 
       ctx.restore();
     }

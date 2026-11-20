@@ -35,6 +35,7 @@ export class WeaponSystem {
     this.equippedWeapons = new Map();
     this.equippedPassives = new Map();
     this.activeProjectiles = [];
+    this.slashRibbons = [];
     this.timeSec = 0;
   }
 
@@ -135,6 +136,49 @@ export class WeaponSystem {
 
     // Update active projectiles
     this.updateProjectiles(dt, enemies);
+
+    // Update slash ribbons
+    for (let i = this.slashRibbons.length - 1; i >= 0; i--) {
+      const r = this.slashRibbons[i];
+      r.age += dt;
+      const progress = r.age / r.lifetime;
+      if (r.mat) r.mat.opacity = Math.max(0, 0.85 * (1.0 - progress));
+      if (r.mesh) r.mesh.scale.setScalar(1.0 + progress * 0.35);
+
+      if (r.age >= r.lifetime) {
+        if (this.scene && r.mesh) this.scene.remove(r.mesh);
+        if (r.mesh && r.mesh.geometry) r.mesh.geometry.dispose();
+        if (r.mat) r.mat.dispose();
+        this.slashRibbons.splice(i, 1);
+      }
+    }
+  }
+
+  spawnSlashRibbon(centerPos, radius, colorHex = 0x9013fe) {
+    if (!this.scene) return;
+
+    const geom = new THREE.RingGeometry(radius * 0.6, radius, 16);
+    geom.rotateX(-Math.PI / 2);
+
+    const mat = new THREE.MeshBasicMaterial({
+      color: colorHex,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.85
+    });
+
+    const mesh = new THREE.Mesh(geom, mat);
+    mesh.name = 'slash_ribbon';
+    mesh.position.set(centerPos.x, centerPos.y + 0.6, centerPos.z);
+    this.scene.add(mesh);
+
+    this.slashRibbons.push({
+      mesh,
+      mat,
+      age: 0,
+      lifetime: 0.22,
+      startRadius: radius
+    });
   }
 
   fireWeapon(id, level, playerPos, playerHeading, enemies) {
@@ -199,6 +243,8 @@ export class WeaponSystem {
         const dmgInfo = this.calculateDamage('spear');
         const radius = lvlData.radius || 7.0;
         const knockback = lvlData.knockback || 14.0;
+
+        this.spawnSlashRibbon(playerPos, radius, 0x9013fe);
 
         for (const enemy of enemies) {
           if (enemy.isDead) continue;
@@ -412,6 +458,9 @@ export class WeaponSystem {
               const dist = p.pos.distanceTo(enemy.pos);
               if (dist <= (p.radius + (enemy.radius || 1.0))) {
                 enemy.takeDamage(p.damage.damage, p.damage.isCrit);
+                if (p.damage.isCrit && this.combatFX) {
+                  this.combatFX.addMusicalNote(enemy.pos.x, enemy.pos.y + 1, enemy.pos.z, Math.random() < 0.5 ? '♪' : '♫');
+                }
               }
             }
             if (this.particles) {
@@ -431,6 +480,9 @@ export class WeaponSystem {
             const dist = p.pos.distanceTo(enemy.pos);
             if (dist <= (p.radius + (enemy.radius || 1.0))) {
               enemy.takeDamage(p.damage.damage, p.damage.isCrit);
+              if (p.damage.isCrit && this.combatFX) {
+                this.combatFX.addMusicalNote(enemy.pos.x, enemy.pos.y + 1, enemy.pos.z, Math.random() < 0.5 ? '♪' : '♫');
+              }
               hitSomething = true;
               if (p.pierce !== undefined) {
                 p.pierce--;
