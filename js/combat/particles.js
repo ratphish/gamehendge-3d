@@ -86,6 +86,10 @@ export class ParticleEngine {
     }
   }
 
+  spawnExplosion(x, y, z, hexColor = 0xffd700, count = 16) {
+    this.spawnDeathShards(x, y, z, hexColor, count);
+  }
+
   spawnSlideDust(x, y, z, count = 6) {
     for (let i = 0; i < count; i++) {
       const p = this.allocParticle();

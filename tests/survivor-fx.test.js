@@ -43,6 +43,9 @@ test('Task 3: ParticleEngine pools particles without unbounded allocation', () =
   pe.spawnSlideDust(2, 1, 2, 8);
   assert.strictEqual(pe.activeCount, 23);
 
+  pe.spawnExplosion(5, 5, 5, 0xffd700, 10);
+  assert.strictEqual(pe.activeCount, 33);
+
   // Advance time past particle lifetime (0.6s)
   pe.update(0.7);
   assert.strictEqual(pe.activeCount, 0, 'Particles must return to pool after expiration');
