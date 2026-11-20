@@ -32,7 +32,7 @@ export class SurvivorControls {
     this.slideSpeed = SURVIVOR_CONFIG.player.slideSpeed;
     this.playerHeight = 1.8;
 
-    this.position = new THREE.Vector3(0, 15, 60);
+    this.position = new THREE.Vector3(0, 8, 85);
     this.yaw = 0;
     this.pitch = 0.35; // Slight top-down isometric tilt
 

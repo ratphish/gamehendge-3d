@@ -51,6 +51,12 @@ export class SurvivorManager {
     this.quests.onQuestComplete = (quest) => this.showDialogueMilestone(quest);
     this.lastTelem = null;
 
+    // Atmospheric Player Lantern Light
+    this.playerLantern = new THREE.PointLight(0xfff2dc, 3.5, 45);
+    if (this.scene) {
+      this.scene.add(this.playerLantern);
+    }
+
     // 2D FX Canvas
     this.fxCanvas = document.getElementById('combat-fx-canvas');
     this.fxCtx = this.fxCanvas ? this.fxCanvas.getContext('2d') : null;
@@ -145,7 +151,7 @@ export class SurvivorManager {
     this.player.iFrameTimer = 0;
 
     if (this.controls) {
-      this.controls.position.set(0, 15, 60);
+      this.controls.position.set(0, 8, 85);
     }
 
     this.weapons.equippedWeapons.clear();
@@ -189,6 +195,10 @@ export class SurvivorManager {
     const telem = this.controls.update(dt, timeSec);
     this.lastTelem = telem;
     const playerPos = telem.position;
+
+    if (this.playerLantern) {
+      this.playerLantern.position.set(playerPos.x, playerPos.y + 2.5, playerPos.z);
+    }
 
     // 2. Health Regen & i-frames
     if (this.player.regen > 0) {

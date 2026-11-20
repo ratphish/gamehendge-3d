@@ -90,17 +90,20 @@ export class GameWorld {
 
   initLighting() {
     // Ambient light
-    const ambient = new THREE.AmbientLight(0xdde8ff, 0.65);
+    const ambient = new THREE.AmbientLight(0xdde8ff, 1.15);
     this.scene.add(ambient);
 
+    // Hemisphere light for ground bounce
+    const hemi = new THREE.HemisphereLight(0x90b4d4, 0x483a2c, 0.75);
+    this.scene.add(hemi);
+
     // Directional sunlight
-    this.sunLight = new THREE.DirectionalLight(0xfffaed, 1.2);
+    this.sunLight = new THREE.DirectionalLight(0xfffaed, 1.4);
     this.sunLight.position.set(150, 250, 100);
-    this.sunLight.castShadow = true;
     this.scene.add(this.sunLight);
 
     // Atmospheric mist / fog (Authentic PS1 linear distance fog)
-    this.scene.fog = new THREE.Fog(0x1a2130, 25, 140);
+    this.scene.fog = new THREE.Fog(0x1a2130, 30, 160);
   }
 
   buildTerrain() {
